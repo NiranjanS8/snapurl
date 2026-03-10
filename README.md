@@ -1,0 +1,1 @@
+SnapURL – A scalable URL shortening service built with Java, Spring Boot, Redis, and PostgreSQL.
