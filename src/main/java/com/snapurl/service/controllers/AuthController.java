@@ -1,5 +1,6 @@
 package com.snapurl.service.controllers;
 
+import com.snapurl.service.dtos.LoginRequest;
 import com.snapurl.service.dtos.RegisterRequest;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.service.UserService;
@@ -27,5 +28,10 @@ public class AuthController {
         user.setRole("ROLE_USER");
         userService.registerUser(user);
         return ResponseEntity.ok("User Registered Successfully");
+    }
+
+    @PostMapping("/public/login")
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
+        return ResponseEntity.ok(userService.loginUser(loginRequest));
     }
 }
