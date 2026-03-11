@@ -7,12 +7,10 @@ import com.snapurl.service.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,6 +33,14 @@ public class UrlMappingController {
         Users user = userService.findByUsername(principal.getName());
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, user);
         return ResponseEntity.ok(urlMappingDTO);
+    }
+
+    @GetMapping("/myurls")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<List<UrlMappingDTO>> getUserUrls(Principal principal) {
+        Users user = userService.findByUsername(principal.getName());
+        List<UrlMappingDTO> userUrls = urlMappingService.getUrlsByUser(user);
+        return ResponseEntity.ok(userUrls);
     }
 
 }

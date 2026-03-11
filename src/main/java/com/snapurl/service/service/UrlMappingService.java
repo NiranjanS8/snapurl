@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -49,5 +50,10 @@ public class UrlMappingService {
             shortUrl.append(characters.charAt(random.nextInt(characters.length())));
         }
         return shortUrl.toString();
+    }
+
+    public List<UrlMappingDTO> getUrlsByUser(Users user) {
+        List<UrlMapping> urlMappings = urlMappingRepo.findByUser(user);
+        return urlMappings.stream().map(this::convertToDTO).toList();
     }
 }
