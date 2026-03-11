@@ -15,7 +15,14 @@ import java.util.Collections;
 @NoArgsConstructor
 public class UserDetailsImpl implements UserDetails {
 
+
     private static  final  long serialVersionUID = 1L;
+
+    // UserDetailsImpl is a custom implementation of the UserDetails interface from Spring Security.
+    // It encapsulates the user's information and authorities (roles) that are used for authentication and authorization purposes in the application.
+    // The class includes fields for the user's ID, username, email, password, and a collection of granted authorities.
+    // It also provides a static method to build a UserDetailsImpl instance from a Users entity, which is typically retrieved from the database.
+    // The getAuthorities(), getPassword(), and getUsername() methods are overridden to return the appropriate values for authentication and authorization processes in Spring Security.
 
     private Long id;
     private String username;
