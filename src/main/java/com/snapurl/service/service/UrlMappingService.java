@@ -2,6 +2,7 @@ package com.snapurl.service.service;
 
 import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
+import com.snapurl.service.models.ClickEvent;
 import com.snapurl.service.models.UrlMapping;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.repositories.ClickEventRepo;
@@ -82,5 +83,20 @@ public class UrlMappingService {
         return clickEventRepo.findByUrlMappingInAndClickTimeBetween(urlMappings, start.atStartOfDay(), end.plusDays(1).atStartOfDay())
                 .stream().collect(Collectors.groupingBy(click -> click.getClickTime().toLocalDate(),
                         Collectors.counting()));
+    }
+
+    public UrlMapping getOriginalUrl(String shortUrl) {
+
+        UrlMapping  urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
+        if(urlMapping != null){
+            urlMapping.setClickCount(urlMapping.getClickCount() + 1);
+            urlMappingRepo.save(urlMapping);
+
+            ClickEvent clickEvent = new ClickEvent();
+            clickEvent.setUrlMapping(urlMapping);
+            clickEvent.setClickTime(LocalDateTime.now());
+            clickEventRepo.save(clickEvent);
+        }
+        return urlMapping;
     }
 }
