@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Data
@@ -22,4 +23,5 @@ public class ClickEvent {
     @ManyToOne
     @JoinColumn(name = "url_mapping_id")
     private UrlMapping urlMapping;
+
 }
