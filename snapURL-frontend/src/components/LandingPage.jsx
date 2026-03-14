@@ -22,6 +22,7 @@ const LandingPage = () => {
 
   const guestUsageCount = Number(localStorage.getItem(GUEST_STORAGE_KEY) || "0");
   const guestUsesLeft = Math.max(GUEST_LIMIT - guestUsageCount, 0);
+  const shortUrlLabel = shortUrl.replace(/^https?:\/\//, "");
 
   const dashBoardNavigateHandler = () => {
     navigate(token ? "/dashboard" : "/login");
@@ -151,21 +152,26 @@ const LandingPage = () => {
                 : `${guestUsesLeft} of ${GUEST_LIMIT} free guest shortens left.`}
             </p>
             {shortUrl && (
-              <div className="mt-4 flex flex-col gap-2 rounded-md bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <a
-                  href={shortUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-all font-semibold text-linkColor"
-                >
-                  {shortUrl}
-                </a>
-                <button
-                  onClick={() => navigator.clipboard.writeText(shortUrl)}
-                  className="rounded-md border border-btnColor px-3 py-2 text-btnColor"
-                >
-                  Copy
-                </button>
+              <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                <p className="break-all text-lg font-bold text-linkColor">
+                  {shortUrlLabel}
+                </p>
+                <div className="mt-3 flex gap-3">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(shortUrl)}
+                    className="rounded-md border border-btnColor px-4 py-2 font-semibold text-btnColor"
+                  >
+                    Copy
+                  </button>
+                  <a
+                    href={shortUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md bg-custom-gradient px-4 py-2 font-semibold text-white"
+                  >
+                    Open
+                  </a>
+                </div>
               </div>
             )}
           </div>
