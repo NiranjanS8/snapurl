@@ -21,10 +21,6 @@ const LandingPage = () => {
   const guestUsageCount = Number(localStorage.getItem(GUEST_STORAGE_KEY) || "0");
   const shortUrlLabel = shortUrl.replace(/^https?:\/\//, "");
 
-  const dashBoardNavigateHandler = () => {
-    navigate(token ? "/dashboard" : "/login");
-  };
-
   const createShortLinkHandler = async () => {
     if (!originalUrl.trim()) {
       toast.error("Please enter a URL");
@@ -89,8 +85,8 @@ const LandingPage = () => {
           </div>
         </div>
       )}
-      <div className="lg:flex-row flex-col lg:py-5 pt-16 lg:gap-10 gap-8 flex justify-between items-center">
-        <div className="flex-1">
+      <div className="flex flex-col items-center pt-16 pb-6 text-center">
+        <div className="w-full max-w-4xl">
           <motion.h1
             initial={{ opacity: 0, y: -80 }}
             whileInView={{
@@ -99,41 +95,13 @@ const LandingPage = () => {
             }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="font-bold font-roboto text-slate-800 md:text-5xl sm:text-4xl text-3xl md:leading-[55px] sm:leading-[45px] leading-10 lg:w-full md:w-[70%] w-full"
+            className="font-bold font-roboto text-slate-800 md:text-5xl sm:text-4xl text-3xl md:leading-[55px] sm:leading-[45px] leading-10"
           >
             SnapURL - Snap. Share. Go.
           </motion.h1>
-          <p className="text-slate-700 text-sm my-5">
-            SnapURL transforms lengthy URLs into short, convenient links for faster sharing. Its easy-to-use platform allows you to create and share compact URLs instantly, making link sharing smoother than ever.
+          <p className="mx-auto mt-5 max-w-2xl text-slate-700 text-sm sm:text-base">
+            SnapURL transforms lengthy URLs into short, convenient links for faster sharing.
           </p>
-          <div className="mt-5 flex items-center gap-3">
-            <motion.button
-              initial={{ opacity: 0, y: 80 }}
-              whileInView={{
-                opacity: 1,
-                y: 0,
-              }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              onClick={createShortLinkHandler}
-              className="bg-custom-gradient w-40 text-white rounded-md py-2"
-            >
-              Create Short Link
-            </motion.button>
-            <motion.button
-              initial={{ opacity: 0, y: 80 }}
-              whileInView={{
-                opacity: 1,
-                y: 0,
-              }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              onClick={dashBoardNavigateHandler}
-              className="border-btnColor border w-40 text-btnColor rounded-md py-2"
-            >
-              Dashboard
-            </motion.button>
-          </div>
         </div>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -143,37 +111,33 @@ const LandingPage = () => {
           }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="flex-1 w-full"
+          className="mt-8 w-full max-w-2xl"
         >
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/70">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-btnColor">
-              Instant Guest Shortening
-            </p>
-            <h2 className="mt-3 text-2xl font-bold text-slate-800">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xl shadow-slate-200/70">
+            <h2 className="text-2xl font-bold text-slate-800">
               Create Short Links Instantly
             </h2>
             <p className="mt-3 text-sm text-slate-600">
-              Paste a long URL and generate a short link in seconds.
               {!token && " Sign up to manage links and view analytics."}
             </p>
-            <div className="mt-5 flex flex-col gap-3">
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 type="url"
                 value={originalUrl}
                 onChange={(event) => setOriginalUrl(event.target.value)}
-                placeholder="Paste a long URL to shorten instantly"
-                className="w-full rounded-md border border-slate-300 px-3 py-3 text-slate-800 outline-none focus:border-btnColor"
+                placeholder="Paste URL to snap"
+                className="w-full flex-1 rounded-md border border-slate-300 px-3 py-3 text-slate-800 outline-none focus:border-btnColor"
               />
               <button
                 onClick={createShortLinkHandler}
                 disabled={loading}
-                className="rounded-md bg-custom-gradient px-5 py-3 font-semibold text-white disabled:opacity-70"
+                className="rounded-md bg-custom-gradient px-6 py-3 font-semibold text-white disabled:opacity-70 sm:min-w-[160px]"
               >
-                {loading ? "Creating..." : "Shorten Now"}
+                {loading ? "Creating..." : "Snap It!"}
               </button>
             </div>
             {shortUrl && (
-              <div className="mt-4 rounded-xl bg-slate-50 p-4">
+              <div className="mt-4 rounded-xl bg-slate-50 p-4 text-left">
                 <p className="break-all text-lg font-bold text-linkColor">
                   {shortUrlLabel}
                 </p>
