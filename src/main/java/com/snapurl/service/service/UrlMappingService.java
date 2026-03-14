@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -45,7 +46,7 @@ public class UrlMappingService {
         dto.setShortUrl(urlMapping.getShortUrl());
         dto.setClickCount(urlMapping.getClickCount());
         dto.setCreatedAt(urlMapping.getCreatedAt().atStartOfDay());
-        dto.setUsername(urlMapping.getUser().getUsername());
+        dto.setUsername(urlMapping.getUser() != null ? urlMapping.getUser().getUsername() : null);
         return dto;
     }
     private String generateShortUrl(String originalUrl) {
@@ -75,7 +76,7 @@ public class UrlMappingService {
                                 return dto;
                     } ).collect(Collectors.toList());
         }
-        return null;
+        return Collections.emptyList();
     }
 
     public Map<LocalDate, Long> getTotalClicksByUserAndDate(Users user, LocalDate start, LocalDate end) {

@@ -36,7 +36,7 @@ public class UserService {
 
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
         );
         // If authentication is successful, set the authentication in the security context
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -50,6 +50,12 @@ public class UserService {
     public Users findByUsername(String name) {
         return userRepo.findByUsername(name).orElseThrow(
                 () -> new UsernameNotFoundException("User not found with username: " + name)
+        );
+    }
+
+    public Users findByEmail(String email) {
+        return userRepo.findByEmail(email).orElseThrow(
+                () -> new UsernameNotFoundException("User not found with email: " + email)
         );
     }
 }

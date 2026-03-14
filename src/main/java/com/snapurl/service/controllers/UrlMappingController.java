@@ -28,13 +28,20 @@ public class UrlMappingController {
     // {"originalUrl": "https://www.example.com/some/long/url"}
     // https://snapurl.com/v9AuvEYE  -->  https://www.example.com/some/long/url
 
+    @PostMapping("/public/shorten")
+    public ResponseEntity<UrlMappingDTO> createPublicShortUrl(@RequestBody Map<String, String> request) {
+        String originalUrl = request.get("originalUrl");
+        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, null);
+        return ResponseEntity.ok(urlMappingDTO);
+    }
+
     @PostMapping("/shorten")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<UrlMappingDTO> createShortUrl(@RequestBody Map<String, String> request,
                                                         Principal principal) {
 
         String originalUrl = request.get("originalUrl");
-        Users user = userService.findByUsername(principal.getName());
+        Users user = userService.findByEmail(principal.getName());
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, user);
         return ResponseEntity.ok(urlMappingDTO);
     }
@@ -42,7 +49,7 @@ public class UrlMappingController {
     @GetMapping("/myurls")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<List<UrlMappingDTO>> getUserUrls(Principal principal) {
-        Users user = userService.findByUsername(principal.getName());
+        Users user = userService.findByEmail(principal.getName());
         List<UrlMappingDTO> userUrls = urlMappingService.getUrlsByUser(user);
         return ResponseEntity.ok(userUrls);
     }
@@ -65,7 +72,7 @@ public class UrlMappingController {
                                                                      @RequestParam("startDate") String startDate,
                                                                       @RequestParam("endDate") String endDate)
     {
-        Users user = userService.findByUsername(principal.getName());
+        Users user = userService.findByEmail(principal.getName());
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
         LocalDate start = LocalDate.parse(startDate, formatter);
         LocalDate end = LocalDate.parse(endDate, formatter);
