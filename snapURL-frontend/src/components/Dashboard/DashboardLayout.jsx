@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Graph from './Graph'
 import { useStoreContext } from '../../contextApi/ContextApi'
 import { useFetchMyShortUrls, useFetchTotalClicks } from '../../hooks/useQuery'
@@ -25,6 +25,7 @@ const DashboardLayout = () => {
     const [cursor, setCursor] = useState(null);
     const [cursorHistory, setCursorHistory] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const linkSectionRef = useRef(null);
 
     // console.log(useFetchTotalClicks(token, onError));
 
@@ -92,6 +93,13 @@ const DashboardLayout = () => {
       navigate("/error");
     }
 
+    const scrollToLinkSection = () => {
+      linkSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    };
+
     const handleNextPage = () => {
       if (!nextCursor) {
         return;
@@ -99,6 +107,7 @@ const DashboardLayout = () => {
       setCursorHistory((prev) => [...prev, cursor]);
       setCursor(nextCursor);
       setCurrentPage((prev) => prev + 1);
+      scrollToLinkSection();
     };
 
     const handlePreviousPage = () => {
@@ -113,6 +122,7 @@ const DashboardLayout = () => {
         return nextHistory;
       });
       setCurrentPage((prev) => Math.max(prev - 1, 1));
+      scrollToLinkSection();
     };
 
     const resetFilters = () => {
@@ -274,7 +284,7 @@ const DashboardLayout = () => {
               </div>
             </div>
 
-            <div className='pt-1'>
+            <div ref={linkSectionRef} className='pt-1'>
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">Link Intelligence</p>
