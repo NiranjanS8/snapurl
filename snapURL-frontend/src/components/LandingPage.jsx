@@ -16,6 +16,7 @@ const LandingPage = () => {
   const [originalUrl, setOriginalUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [shortUrl, setShortUrl] = useState("");
+  const [cardError, setCardError] = useState("");
   const [showLimitDialog, setShowLimitDialog] = useState(false);
 
   const guestUsageCount = Number(localStorage.getItem(GUEST_STORAGE_KEY) || "0");
@@ -23,7 +24,7 @@ const LandingPage = () => {
 
   const createShortLinkHandler = async () => {
     if (!originalUrl.trim()) {
-      toast.error("Please enter a URL");
+      setCardError('We\'ll need a valid URL, like "super-long-link.com/shorten-it"');
       return;
     }
 
@@ -33,6 +34,7 @@ const LandingPage = () => {
     }
 
     setLoading(true);
+    setCardError("");
     try {
       const endpoint = token ? "/api/urls/shorten" : "/api/urls/public/shorten";
       const { data } = await api.post(endpoint, { originalUrl });
@@ -48,7 +50,10 @@ const LandingPage = () => {
         toast.success("Short URL copied to clipboard");
       });
     } catch (error) {
-      toast.error("Unable to create short URL");
+      setCardError(
+        error?.response?.data?.message ||
+          'We\'ll need a valid URL, like "super-long-link.com/shorten-it"'
+      );
     } finally {
       setLoading(false);
     }
@@ -124,9 +129,16 @@ const LandingPage = () => {
               <input
                 type="url"
                 value={originalUrl}
-                onChange={(event) => setOriginalUrl(event.target.value)}
+                onChange={(event) => {
+                  setOriginalUrl(event.target.value);
+                  if (cardError) {
+                    setCardError("");
+                  }
+                }}
                 placeholder="Paste URL to snap"
-                className="w-full flex-1 rounded-md border border-slate-300 px-3 py-3 text-slate-800 outline-none focus:border-btnColor"
+                className={`w-full flex-1 rounded-md border px-3 py-3 text-slate-800 outline-none focus:border-btnColor ${
+                  cardError ? "border-red-500" : "border-slate-300"
+                }`}
               />
               <button
                 onClick={createShortLinkHandler}
@@ -136,6 +148,11 @@ const LandingPage = () => {
                 {loading ? "Creating..." : "Snap It!"}
               </button>
             </div>
+            {cardError && (
+              <p className="mt-3 text-left text-sm font-semibold text-red-600">
+                {cardError}
+              </p>
+            )}
             {shortUrl && (
               <div className="mt-4 rounded-xl bg-slate-50 p-4 text-left">
                 <p className="break-all text-lg font-bold text-linkColor">

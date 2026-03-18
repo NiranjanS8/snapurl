@@ -10,6 +10,7 @@ import com.snapurl.service.repositories.UrlMappingRepo;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -22,10 +23,15 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class UrlMappingService {
 
+    public static final String INVALID_URL_MESSAGE = "We'll need a valid URL, like \"super-long-link.com/shorten-it\"";
+
     private UrlMappingRepo urlMappingRepo;
     private ClickEventRepo clickEventRepo;
 
     public UrlMappingDTO createShortUrl(String originalUrl, Users user) {
+        if (!isValidUrl(originalUrl)) {
+            throw new IllegalArgumentException(INVALID_URL_MESSAGE);
+        }
 
         String shortUrl = generateShortUrl(originalUrl);
         UrlMapping urlMapping = new UrlMapping();
@@ -57,6 +63,25 @@ public class UrlMappingService {
             shortUrl.append(characters.charAt(random.nextInt(characters.length())));
         }
         return shortUrl.toString();
+    }
+
+    private boolean isValidUrl(String originalUrl) {
+        if (originalUrl == null || originalUrl.isBlank()) {
+            return false;
+        }
+
+        String normalizedUrl = originalUrl.trim();
+        String candidate = normalizedUrl.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*$")
+                ? normalizedUrl
+                : "https://" + normalizedUrl;
+
+        try {
+            URI uri = URI.create(candidate);
+            String host = uri.getHost();
+            return host != null && !host.isBlank() && host.contains(".");
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     public List<UrlMappingDTO> getUrlsByUser(Users user) {

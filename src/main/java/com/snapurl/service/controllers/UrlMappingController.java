@@ -29,21 +29,29 @@ public class UrlMappingController {
     // https://snapurl.com/v9AuvEYE  -->  https://www.example.com/some/long/url
 
     @PostMapping("/public/shorten")
-    public ResponseEntity<UrlMappingDTO> createPublicShortUrl(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> createPublicShortUrl(@RequestBody Map<String, String> request) {
         String originalUrl = request.get("originalUrl");
-        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, null);
-        return ResponseEntity.ok(urlMappingDTO);
+        try {
+            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, null);
+            return ResponseEntity.ok(urlMappingDTO);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/shorten")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<UrlMappingDTO> createShortUrl(@RequestBody Map<String, String> request,
+    public ResponseEntity<?> createShortUrl(@RequestBody Map<String, String> request,
                                                         Principal principal) {
 
         String originalUrl = request.get("originalUrl");
         Users user = userService.findByEmail(principal.getName());
-        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, user);
-        return ResponseEntity.ok(urlMappingDTO);
+        try {
+            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, user);
+            return ResponseEntity.ok(urlMappingDTO);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @GetMapping("/myurls")
