@@ -39,16 +39,6 @@ const Navbar = () => {
               Home
             </Link>
           </li>
-          <li>
-            <Link
-              className={`rounded-full px-4 py-2 text-sm font-medium tracking-[0.01em] ${
-                path === "/about" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
-              }`}
-              to="/about"
-            >
-              About
-            </Link>
-          </li>
           {token && (
             <li>
               <Link

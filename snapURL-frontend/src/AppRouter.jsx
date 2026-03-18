@@ -4,7 +4,6 @@ import ShortenUrlPage from "./components/ShortenUrlPage";
 import { Toaster } from "react-hot-toast";
 import Footer from "./components/Footer";
 import LandingPage from "./components/LandingPage";
-import AboutPage from "./components/AboutPage";
 import RegisterPage from "./components/RegisterPage";
 import LoginPage from "./components/LoginPage";
 import DashboardLayout from "./components/Dashboard/DashboardLayout";
@@ -26,7 +25,6 @@ const AppRouter = () => {
           {!hideHeaderFooter && <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(60,65,92,0.14),_transparent_22%),radial-gradient(circle_at_top_right,_rgba(48,27,63,0.18),_transparent_20%)]" />}
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/about" element={<AboutPage />} />
             <Route path="/s/:url" element={<ShortenUrlPage />} />
 
             <Route path="/register" element={<PrivateRoute publicPage={true}><RegisterPage /></PrivateRoute>} />
