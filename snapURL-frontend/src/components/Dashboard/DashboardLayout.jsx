@@ -286,68 +286,111 @@ const DashboardLayout = () => {
                   Page {currentPage} - {safeShortenUrls.length} results
                 </p>
               </div>
-              <div className="mb-5 grid gap-3 rounded-2xl bg-[#1e1e1e] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,0.65fr))_auto]">
-                <input
-                  type="text"
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search short link or original URL"
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                />
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                />
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  value={minClicks}
-                  onChange={(event) => setMinClicks(event.target.value)}
-                  placeholder="Min clicks"
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  value={maxClicks}
-                  onChange={(event) => setMaxClicks(event.target.value)}
-                  placeholder="Max clicks"
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                >
-                  <option value="all">All status</option>
-                  <option value="active">Active</option>
-                  <option value="expired">Expired</option>
-                </select>
-                <select
-                  value={sortOption}
-                  onChange={(event) => setSortOption(event.target.value)}
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                >
-                  <option value="latest">Latest</option>
-                  <option value="oldest">Oldest</option>
-                  <option value="clicked">Most clicked</option>
-                  <option value="leastClicked">Least clicked</option>
-                  <option value="accessed">Recently accessed</option>
-                </select>
-                <button
-                  onClick={resetFilters}
-                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm font-medium tracking-[0.01em] text-[#B4A5A5] shadow-[0_10px_24px_rgba(0,0,0,0.18)] hover:text-white"
-                >
-                  Reset
-                </button>
+              <div className="mb-5 rounded-2xl bg-[#1e1e1e] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                  <div className="min-w-0 xl:w-[320px]">
+                    <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                      Search
+                    </label>
+                    <input
+                      type="text"
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      placeholder="Short link or original URL"
+                      className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                    />
+                  </div>
+
+                  <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                    <div>
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(event) => setStartDate(event.target.value)}
+                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(event) => setEndDate(event.target.value)}
+                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                        Min Clicks
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={minClicks}
+                        onChange={(event) => setMinClicks(event.target.value)}
+                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                        Max Clicks
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={maxClicks}
+                        onChange={(event) => setMaxClicks(event.target.value)}
+                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                        Status
+                      </label>
+                      <select
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value)}
+                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      >
+                        <option value="all">All status</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 xl:min-w-[220px] xl:justify-end">
+                    <div className="flex-1 xl:max-w-[170px]">
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                        Sort
+                      </label>
+                      <select
+                        value={sortOption}
+                        onChange={(event) => setSortOption(event.target.value)}
+                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      >
+                        <option value="latest">Latest</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="clicked">Most clicked</option>
+                        <option value="leastClicked">Least clicked</option>
+                        <option value="accessed">Recently accessed</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        onClick={resetFilters}
+                        className="h-11 rounded-xl px-3 text-sm font-medium tracking-[0.01em] text-[#B4A5A5] transition-colors hover:text-white"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
               {!isLoading && safeShortenUrls.length === 0 ? (
                 <div className="flex justify-center pt-10">
