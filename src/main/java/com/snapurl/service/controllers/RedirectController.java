@@ -22,6 +22,7 @@ public class RedirectController {
         UrlMapping urlMapping = urlMappingService.getOriginalUrl(shortUrl);
         // If the short URL exists, redirect to the original URL
         if(urlMapping != null){
+            urlMappingService.trackRedirect(urlMapping);
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", urlMapping.getOriginalUrl());
             return ResponseEntity.status(302).headers(headers).build();

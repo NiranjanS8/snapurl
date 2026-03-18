@@ -3,7 +3,6 @@ package com.snapurl.service.service;
 import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
-import com.snapurl.service.models.ClickEvent;
 import com.snapurl.service.models.UrlMapping;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.repositories.ClickEventRepo;
@@ -42,6 +41,8 @@ public class UrlMappingService {
 
     private UrlMappingRepo urlMappingRepo;
     private ClickEventRepo clickEventRepo;
+    private ClickAnalyticsDispatcher clickAnalyticsDispatcher;
+    private ShortUrlCacheService shortUrlCacheService;
 
     public UrlMappingDTO createShortUrl(String originalUrl, String customAlias, Users user) {
         if (!isValidUrl(originalUrl)) {
@@ -51,10 +52,14 @@ public class UrlMappingService {
         String normalizedAlias = normalizeAlias(customAlias);
         if (normalizedAlias != null) {
             validateCustomAlias(normalizedAlias);
-            return convertToDTO(saveUrlMapping(originalUrl, normalizedAlias, user, true));
+            UrlMapping savedMapping = saveUrlMapping(originalUrl, normalizedAlias, user, true);
+            shortUrlCacheService.put(savedMapping);
+            return convertToDTO(savedMapping);
         }
 
-        return convertToDTO(createWithGeneratedShortUrl(originalUrl, user));
+        UrlMapping savedMapping = createWithGeneratedShortUrl(originalUrl, user);
+        shortUrlCacheService.put(savedMapping);
+        return convertToDTO(savedMapping);
     }
 
     private UrlMappingDTO convertToDTO(UrlMapping urlMapping) {
@@ -204,19 +209,23 @@ public class UrlMappingService {
     }
 
     public UrlMapping getOriginalUrl(String shortUrl) {
+        UrlMapping cachedUrlMapping = shortUrlCacheService.get(shortUrl);
+        if (cachedUrlMapping != null) {
+            return cachedUrlMapping;
+        }
 
-        UrlMapping  urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
-        if(urlMapping != null){
-            urlMapping.setClickCount(urlMapping.getClickCount() + 1);
-            urlMapping.setLastAccessed(LocalDateTime.now());
-            urlMappingRepo.save(urlMapping);
-
-            ClickEvent clickEvent = new ClickEvent();
-            clickEvent.setUrlMapping(urlMapping);
-            clickEvent.setClickTime(LocalDateTime.now());
-            clickEventRepo.save(clickEvent);
+        UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
+        if (urlMapping != null) {
+            shortUrlCacheService.put(urlMapping);
         }
         return urlMapping;
+    }
+
+    public void trackRedirect(UrlMapping urlMapping) {
+        if (urlMapping == null) {
+            return;
+        }
+        clickAnalyticsDispatcher.dispatchClick(urlMapping);
     }
 
     @Transactional
@@ -230,6 +239,7 @@ public class UrlMappingService {
 
         clickEventRepo.deleteByUrlMapping(urlMapping);
         urlMappingRepo.delete(urlMapping);
+        shortUrlCacheService.evict(urlMapping.getShortUrl());
     }
 
     private boolean isExpired(UrlMapping urlMapping) {
