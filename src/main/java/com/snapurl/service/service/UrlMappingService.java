@@ -9,16 +9,19 @@ import com.snapurl.service.models.Users;
 import com.snapurl.service.repositories.ClickEventRepo;
 import com.snapurl.service.repositories.UrlMappingRepo;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.security.SecureRandom;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,26 +29,32 @@ import java.util.stream.Collectors;
 public class UrlMappingService {
 
     public static final String INVALID_URL_MESSAGE = "We'll need a valid URL, like \"super-long-link.com/shorten-it\"";
+    public static final String INVALID_ALIAS_MESSAGE = "Custom alias can only use letters, numbers, hyphens, or underscores and must be 3 to 32 characters long.";
+    public static final String RESERVED_ALIAS_MESSAGE = "That alias is reserved. Please choose another one.";
+    public static final String DUPLICATE_ALIAS_MESSAGE = "That short link alias is already in use. Try another one.";
+    private static final String SHORT_URL_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int GENERATED_SHORT_URL_LENGTH = 8;
+    private static final int MAX_GENERATION_ATTEMPTS = 10;
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Set<String> RESERVED_ALIASES = Set.of(
+            "api", "admin", "login", "register", "signup", "auth", "public", "dashboard", "error", "s"
+    );
 
     private UrlMappingRepo urlMappingRepo;
     private ClickEventRepo clickEventRepo;
 
-    public UrlMappingDTO createShortUrl(String originalUrl, Users user) {
+    public UrlMappingDTO createShortUrl(String originalUrl, String customAlias, Users user) {
         if (!isValidUrl(originalUrl)) {
             throw new IllegalArgumentException(INVALID_URL_MESSAGE);
         }
 
-        String shortUrl = generateShortUrl(originalUrl);
-        UrlMapping urlMapping = new UrlMapping();
-        urlMapping.setOriginalUrl(originalUrl);
-        urlMapping.setShortUrl(shortUrl);
-        urlMapping.setUser(user);
-        urlMapping.setCreatedAt(LocalDateTime.now());
-        urlMapping.setExpiresAt(LocalDateTime.now().plusYears(1));
+        String normalizedAlias = normalizeAlias(customAlias);
+        if (normalizedAlias != null) {
+            validateCustomAlias(normalizedAlias);
+            return convertToDTO(saveUrlMapping(originalUrl, normalizedAlias, user, true));
+        }
 
-        UrlMapping savedMapping = urlMappingRepo.save(urlMapping);
-        return convertToDTO(savedMapping);
-
+        return convertToDTO(createWithGeneratedShortUrl(originalUrl, user));
     }
 
     private UrlMappingDTO convertToDTO(UrlMapping urlMapping) {
@@ -61,14 +70,74 @@ public class UrlMappingService {
         dto.setUsername(urlMapping.getUser() != null ? urlMapping.getUser().getUsername() : null);
         return dto;
     }
-    private String generateShortUrl(String originalUrl) {
-        Random random = new Random();
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder shortUrl = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
-            shortUrl.append(characters.charAt(random.nextInt(characters.length())));
+    private UrlMapping createWithGeneratedShortUrl(String originalUrl, Users user) {
+        Set<String> attemptedCodes = new HashSet<>();
+
+        for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+            String generatedShortUrl = generateShortUrl();
+            if (!attemptedCodes.add(generatedShortUrl) || urlMappingRepo.existsByShortUrl(generatedShortUrl)) {
+                continue;
+            }
+
+            try {
+                return saveUrlMapping(originalUrl, generatedShortUrl, user, false);
+            } catch (IllegalStateException ex) {
+                if (!DUPLICATE_ALIAS_MESSAGE.equals(ex.getMessage())) {
+                    throw ex;
+                }
+            }
+        }
+
+        throw new IllegalStateException("We couldn't create a unique short link right now. Please try again.");
+    }
+
+    private UrlMapping saveUrlMapping(String originalUrl, String shortUrl, Users user, boolean customAliasRequested) {
+        UrlMapping urlMapping = new UrlMapping();
+        urlMapping.setOriginalUrl(originalUrl.trim());
+        urlMapping.setShortUrl(shortUrl);
+        urlMapping.setUser(user);
+        urlMapping.setCreatedAt(LocalDateTime.now());
+        urlMapping.setExpiresAt(LocalDateTime.now().plusYears(1));
+
+        try {
+            return urlMappingRepo.save(urlMapping);
+        } catch (DataIntegrityViolationException ex) {
+            if (customAliasRequested || urlMappingRepo.existsByShortUrl(shortUrl)) {
+                throw new IllegalStateException(DUPLICATE_ALIAS_MESSAGE);
+            }
+            throw ex;
+        }
+    }
+
+    private String generateShortUrl() {
+        StringBuilder shortUrl = new StringBuilder(GENERATED_SHORT_URL_LENGTH);
+        for (int i = 0; i < GENERATED_SHORT_URL_LENGTH; i++) {
+            shortUrl.append(SHORT_URL_CHARACTERS.charAt(RANDOM.nextInt(SHORT_URL_CHARACTERS.length())));
         }
         return shortUrl.toString();
+    }
+
+    private String normalizeAlias(String customAlias) {
+        if (customAlias == null) {
+            return null;
+        }
+
+        String normalizedAlias = customAlias.trim();
+        return normalizedAlias.isEmpty() ? null : normalizedAlias;
+    }
+
+    private void validateCustomAlias(String customAlias) {
+        if (!customAlias.matches("^[A-Za-z0-9_-]{3,32}$")) {
+            throw new IllegalArgumentException(INVALID_ALIAS_MESSAGE);
+        }
+
+        if (RESERVED_ALIASES.contains(customAlias.toLowerCase())) {
+            throw new IllegalArgumentException(RESERVED_ALIAS_MESSAGE);
+        }
+
+        if (urlMappingRepo.existsByShortUrl(customAlias)) {
+            throw new IllegalStateException(DUPLICATE_ALIAS_MESSAGE);
+        }
     }
 
     private boolean isValidUrl(String originalUrl) {

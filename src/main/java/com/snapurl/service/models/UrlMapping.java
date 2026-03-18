@@ -10,6 +10,9 @@ import java.util.List;
 
 @Entity
 @Table(
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_url_mapping_short_url", columnNames = "shortUrl")
+        },
         indexes = {
                 @Index(name = "idx_url_mapping_user_created", columnList = "user_id, createdAt"),
                 @Index(name = "idx_url_mapping_user_clicks", columnList = "user_id, clickCount"),
@@ -28,6 +31,7 @@ public class UrlMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String originalUrl;
+    @Column(nullable = false, unique = true, length = 32)
     private String shortUrl;
     private int clickCount = 0;
     private LocalDateTime createdAt;

@@ -32,11 +32,14 @@ public class UrlMappingController {
     @PostMapping("/public/shorten")
     public ResponseEntity<?> createPublicShortUrl(@RequestBody Map<String, String> request) {
         String originalUrl = request.get("originalUrl");
+        String customAlias = request.get("customAlias");
         try {
-            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, null);
+            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, null);
             return ResponseEntity.ok(urlMappingDTO);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(409).body(Map.of("message", ex.getMessage()));
         }
     }
 
@@ -46,12 +49,15 @@ public class UrlMappingController {
                                                         Principal principal) {
 
         String originalUrl = request.get("originalUrl");
+        String customAlias = request.get("customAlias");
         Users user = userService.findByEmail(principal.getName());
         try {
-            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, user);
+            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, user);
             return ResponseEntity.ok(urlMappingDTO);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(409).body(Map.of("message", ex.getMessage()));
         }
     }
 

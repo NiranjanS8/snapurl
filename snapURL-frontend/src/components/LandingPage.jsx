@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { FaChartLine, FaLink, FaLock, FaRocket } from "react-icons/fa";
+import { LiaCheckSolid } from "react-icons/lia";
 
 import Card from "./Card";
 import { useStoreContext } from "../contextApi/ContextApi";
@@ -10,11 +11,14 @@ import api from "../api/api";
 
 const GUEST_LIMIT = 3;
 const GUEST_STORAGE_KEY = "SNAPURL_GUEST_SHORTENS";
+const RESERVED_ALIASES = new Set(["api", "admin", "login", "register", "signup", "auth", "public", "dashboard", "error", "s"]);
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const { token } = useStoreContext();
   const [originalUrl, setOriginalUrl] = useState("");
+  const [customAlias, setCustomAlias] = useState("");
+  const [useCustomAlias, setUseCustomAlias] = useState(false);
   const [loading, setLoading] = useState(false);
   const [shortUrl, setShortUrl] = useState("");
   const [cardError, setCardError] = useState("");
@@ -29,6 +33,16 @@ const LandingPage = () => {
       return;
     }
 
+    if (useCustomAlias && customAlias.trim() && !/^[A-Za-z0-9_-]{3,32}$/.test(customAlias.trim())) {
+      setCardError("Custom alias can only use letters, numbers, hyphens, or underscores and must be 3 to 32 characters long.");
+      return;
+    }
+
+    if (useCustomAlias && customAlias.trim() && RESERVED_ALIASES.has(customAlias.trim().toLowerCase())) {
+      setCardError("That alias is reserved. Please choose another one.");
+      return;
+    }
+
     if (!token && guestUsageCount >= GUEST_LIMIT) {
       setShowLimitDialog(true);
       return;
@@ -38,11 +52,17 @@ const LandingPage = () => {
     setCardError("");
     try {
       const endpoint = token ? "/api/urls/shorten" : "/api/urls/public/shorten";
-      const { data } = await api.post(endpoint, { originalUrl });
+      const payload = {
+        originalUrl,
+        customAlias: useCustomAlias ? customAlias.trim() || undefined : undefined,
+      };
+      const { data } = await api.post(endpoint, payload);
       const generatedUrl = `${import.meta.env.VITE_REACT_FRONT_END_URL}/s/${data.shortUrl}`;
 
       setShortUrl(generatedUrl);
       setOriginalUrl("");
+      setCustomAlias("");
+      setUseCustomAlias(false);
 
       if (!token) {
         localStorage.setItem(GUEST_STORAGE_KEY, String(guestUsageCount + 1));
@@ -128,7 +148,7 @@ const LandingPage = () => {
             <p className="mt-3 text-sm leading-6 text-[#B4A5A5]">
               {!token && " Sign up to manage links and view analytics."}
             </p>
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
               <input
                 type="url"
                 value={originalUrl}
@@ -139,17 +159,66 @@ const LandingPage = () => {
                   }
                 }}
                 placeholder="Paste URL to snap"
-                className={`w-full flex-1 rounded-2xl bg-[#151515] px-4 py-4 text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-all duration-200 focus:ring-2 focus:ring-[#B4A5A5]/55 ${
+                className={`h-14 w-full rounded-2xl bg-[#151515] px-5 text-[15px] text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-all duration-200 focus:ring-2 focus:ring-[#B4A5A5]/55 lg:flex-[1.65] ${
                   cardError ? "ring-2 ring-red-500/70" : ""
                 }`}
               />
+              <div
+                className={`transition-all duration-300 ease-out ${
+                  useCustomAlias
+                    ? "opacity-100 lg:w-[220px] lg:translate-x-0"
+                    : "pointer-events-none opacity-0 lg:w-0 lg:-translate-x-2"
+                }`}
+              >
+                <div className="relative w-full py-1 lg:w-[220px]">
+                  <input
+                    type="text"
+                    value={customAlias}
+                    onChange={(event) => {
+                      setCustomAlias(event.target.value);
+                      if (cardError) {
+                        setCardError("");
+                      }
+                    }}
+                    placeholder="Custom alias"
+                    className="h-14 w-full rounded-2xl bg-[#17171a] px-4 text-[14px] text-white/88 outline-none shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition-all duration-200 focus:ring-2 focus:ring-[#B4A5A5]/45"
+                  />
+                </div>
+              </div>
               <button
                 onClick={createShortLinkHandler}
                 disabled={loading}
-                className="rounded-2xl bg-[#301B3F] px-6 py-4 text-[17px] font-medium tracking-[0.01em] text-white transition-all duration-200 hover:bg-[#3C415C] disabled:opacity-70 sm:min-w-[160px]"
+                className="h-14 rounded-2xl bg-[#301B3F] px-6 text-[17px] font-medium tracking-[0.01em] text-white transition-all duration-200 hover:bg-[#3C415C] disabled:opacity-70 lg:min-w-[158px]"
               >
                 {loading ? "Creating..." : "Snap It!"}
               </button>
+            </div>
+            <div className="mt-3 flex flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between">
+              <label className="inline-flex w-fit cursor-pointer items-center gap-3 text-sm text-[#B4A5A5]">
+                <input
+                  type="checkbox"
+                  checked={useCustomAlias}
+                  onChange={(event) => {
+                    setUseCustomAlias(event.target.checked);
+                    if (!event.target.checked) {
+                      setCustomAlias("");
+                    }
+                    if (cardError) {
+                      setCardError("");
+                    }
+                  }}
+                  className="peer sr-only"
+                />
+                <span className="flex h-5 w-5 items-center justify-center rounded-[6px] border border-white/10 bg-[#151515] text-transparent shadow-[0_6px_16px_rgba(0,0,0,0.16)] transition-all duration-200 peer-checked:border-[#3C415C] peer-checked:bg-[#301B3F] peer-checked:text-white peer-hover:border-white/15 peer-focus-visible:ring-2 peer-focus-visible:ring-[#B4A5A5]/40">
+                  <LiaCheckSolid className="text-sm" />
+                </span>
+                <span className="font-medium text-white/92">Customize your short link</span>
+              </label>
+              {useCustomAlias && (
+                <p className="text-xs text-[#B4A5A5]">
+                  Only letters, numbers, - and _. e.g. my-portfolio
+                </p>
+              )}
             </div>
             {cardError && (
               <p className="mt-3 text-left text-sm font-medium text-red-400">

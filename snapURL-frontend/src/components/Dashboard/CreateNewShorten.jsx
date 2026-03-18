@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { useStoreContext } from '../../contextApi/ContextApi';
 import { useForm } from 'react-hook-form';
-import { data } from 'autoprefixer';
 import TextField from '../TextField';
 import { Tooltip } from '@mui/material';
 import { RxCross2 } from 'react-icons/rx';
 import api from '../../api/api';
 import toast from 'react-hot-toast';
+
+const RESERVED_ALIASES = new Set(["api", "admin", "login", "register", "signup", "auth", "public", "dashboard", "error", "s"]);
 
 const CreateNewShorten = ({ setOpen, refetch }) => {
     const { token } = useStoreContext();
@@ -20,14 +21,20 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
   } = useForm({
     defaultValues: {
       originalUrl: "",
+      customAlias: "",
     },
     mode: "onTouched",
   });
 
-  const createShortUrlHandler = async (data) => {
+  const createShortUrlHandler = async (formData) => {
     setLoading(true);
     try {
-        const { data: res } = await api.post("/api/urls/shorten", data, {
+        const payload = {
+          ...formData,
+          customAlias: formData.customAlias?.trim() || undefined,
+        };
+
+        const { data: res } = await api.post("/api/urls/shorten", payload, {
             headers: {
               "Content-Type": "application/json",
               Accept: "application/json",
@@ -48,7 +55,7 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
           reset();
           setOpen(false);
     } catch (error) {
-        toast.error("Create ShortURL Failed");
+        toast.error(error?.response?.data?.message || "Create ShortURL Failed");
     } finally {
         setLoading(false);
     }
@@ -79,6 +86,46 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
             register={register}
             errors={errors}
           />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-1">
+          <label
+            htmlFor="customAlias"
+            className="text-sm font-medium uppercase tracking-[0.12em] text-[#B4A5A5]"
+          >
+            Custom Alias
+          </label>
+          <input
+            id="customAlias"
+            type="text"
+            placeholder="Optional"
+            className={`rounded-2xl bg-[#151515] px-4 py-3 text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] ${
+              errors.customAlias?.message ? "ring-2 ring-red-500/70" : "focus:ring-2 focus:ring-[#B4A5A5]/55"
+            }`}
+            {...register("customAlias", {
+              validate: (value) => {
+                const normalizedValue = value?.trim();
+                if (!normalizedValue) {
+                  return true;
+                }
+                if (!/^[A-Za-z0-9_-]{3,32}$/.test(normalizedValue)) {
+                  return "Use 3-32 letters, numbers, hyphens, or underscores only";
+                }
+                if (RESERVED_ALIASES.has(normalizedValue.toLowerCase())) {
+                  return "That alias is reserved. Please choose another one.";
+                }
+                return true;
+              },
+            })}
+          />
+          <p className="text-xs text-[#B4A5A5]">
+            Optional. Great for branded links like `product-launch`.
+          </p>
+          {errors.customAlias?.message && (
+            <p className="mt-1 text-sm font-medium text-red-400">
+              {errors.customAlias.message}*
+            </p>
+          )}
         </div>
 
         <button
