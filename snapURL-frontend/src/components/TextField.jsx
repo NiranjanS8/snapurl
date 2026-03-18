@@ -15,7 +15,7 @@ const TextField = ({
       <div className="flex flex-col gap-1">
         <label
           htmlFor={id}
-          className={`${className ? className : ""} text-sm font-bold uppercase tracking-[0.12em] text-[#B4A5A5]`}
+          className={`${className ? className : ""} text-sm font-medium uppercase tracking-[0.12em] text-[#B4A5A5]`}
         >
           {label}
         </label>
@@ -52,7 +52,7 @@ const TextField = ({
         />
   
         {errors[id]?.message && (
-          <p className="mt-1 text-sm font-semibold text-red-400">
+          <p className="mt-1 text-sm font-medium text-red-400">
             {errors[id]?.message}*
           </p>
         )}

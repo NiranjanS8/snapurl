@@ -42,69 +42,70 @@ const DashboardLayout = () => {
     }
 
   return (
-    <div className="lg:px-14 sm:px-8 px-4 min-h-[calc(100vh-64px)]">
+    <div className="min-h-[calc(100vh-64px)] px-4 py-5 sm:px-8 sm:py-6 lg:px-14 lg:py-8">
         {loader ? ( 
             <Loader />
         ): ( 
-        <div className="mx-auto w-full py-12 lg:w-[92%]">
-            <div className="overflow-hidden rounded-2xl bg-[#1e1e1e] p-6 shadow-[0_20px_48px_rgba(0,0,0,0.24)] sm:p-8">
-              <div className="flex flex-col gap-8">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+            <div className="overflow-hidden rounded-2xl bg-[#1e1e1e] p-5 shadow-[0_20px_48px_rgba(0,0,0,0.24)] sm:p-6 lg:p-7">
+              <div className="flex flex-col gap-5 lg:gap-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-2xl">
-                    <p className="text-sm font-black uppercase tracking-[0.28em] text-[#B4A5A5]">
+                    <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">
                       Analytics Command Center
                     </p>
-                    <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
+                    <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-white sm:text-4xl">
                       See what your links are doing at a glance.
                     </h1>
-                    <p className="mt-4 max-w-xl text-sm leading-6 text-[#B4A5A5] sm:text-base">
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-[#B4A5A5]">
                       A bold live view of link performance, click momentum, and top-performing short URLs across your dashboard.
                     </p>
                   </div>
 
                   <div className='sm:text-end text-center'>
                     <button
-                        className='rounded-full bg-[#301B3F] px-5 py-3 font-semibold text-white hover:bg-[#3C415C]'
+                        className='rounded-full bg-[#301B3F] px-5 py-2.5 text-sm font-medium tracking-[0.01em] text-white hover:bg-[#3C415C]'
                         onClick={() => setShortenPopUp(true)}>
                         Create a New Short URL
                     </button>
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl bg-[#151515] px-5 py-5 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#B4A5A5]">Total Clicks</p>
-                    <p className="mt-4 text-4xl font-black tracking-tight">{totalClickCount}</p>
-                    <p className="mt-2 text-sm text-[#B4A5A5]">Across all tracked short links</p>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Total Clicks</p>
+                    <p className="mt-2 text-3xl font-bold tracking-[-0.02em] sm:text-[32px]">{totalClickCount}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Across all tracked short links</p>
                   </div>
 
-                  <div className="rounded-2xl bg-[#151515] px-5 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#B4A5A5]">Links Created</p>
-                    <p className="mt-4 text-4xl font-black tracking-tight text-white">{totalLinks}</p>
-                    <p className="mt-2 text-sm text-[#B4A5A5]">Short links currently in your dashboard</p>
+                  <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Links Created</p>
+                    <p className="mt-2 text-3xl font-bold tracking-[-0.02em] text-white sm:text-[32px]">{totalLinks}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Short links currently in your dashboard</p>
                   </div>
 
-                  <div className="rounded-2xl bg-[#151515] px-5 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#B4A5A5]">Average Engagement</p>
-                    <p className="mt-4 text-4xl font-black tracking-tight text-white">{avgClicksPerLink}</p>
-                    <p className="mt-2 text-sm text-[#B4A5A5]">Average clicks per active link</p>
+                  <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Average Engagement</p>
+                    <p className="mt-2 text-3xl font-bold tracking-[-0.02em] text-white sm:text-[32px]">{avgClicksPerLink}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Average clicks per active link</p>
                   </div>
 
-                  <div className="rounded-2xl bg-[#151515] px-5 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#B4A5A5]">Latest Activity</p>
-                    <p className="mt-4 text-3xl font-black tracking-tight text-white">{latestActivityDate}</p>
-                    <p className="mt-2 text-sm text-[#B4A5A5]">
+                  <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Latest Activity</p>
+                    <p className="mt-2 text-2xl font-bold tracking-[-0.02em] text-white sm:text-[28px]">{latestActivityDate}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">
                       {latestActivity ? `${latestActivity.count ?? latestActivity.clickCount ?? 0} clicks recorded` : "Share a link to start collecting data"}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.9fr)]">
-                  <div className="relative overflow-hidden rounded-2xl bg-[#151515] p-5 shadow-[0_16px_36px_rgba(0,0,0,0.2)] sm:p-6">
-                    <div className="mb-5 flex items-center justify-between gap-4">
+                <div className="grid gap-4 xl:grid-cols-12 xl:items-stretch">
+                  <div className="xl:col-span-8">
+                  <div className="relative h-full overflow-hidden rounded-2xl bg-[#151515] p-4 shadow-[0_16px_36px_rgba(0,0,0,0.2)] sm:p-5 lg:p-6">
+                    <div className="mb-4 flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B4A5A5]">Performance Timeline</p>
-                        <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
+                        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Performance Timeline</p>
+                        <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-white sm:text-2xl">
                           Click activity over time
                         </h2>
                       </div>
@@ -112,10 +113,10 @@ const DashboardLayout = () => {
                         <FaChartLine />
                       </div>
                     </div>
-                    <div className="h-96 relative">
+                    <div className="relative h-[280px] sm:h-[320px] lg:h-[360px]">
                         {safeTotalClicks.length === 0 && (
                              <div className="absolute inset-0 m-auto flex flex-col items-center justify-center px-6 text-center">
-                             <h1 className="mb-2 text-[18px] font-bold text-white sm:text-2xl">
+                             <h1 className="mb-2 text-[18px] font-semibold tracking-[-0.02em] text-white sm:text-2xl">
                                No Data For This Time Period
                              </h1>
                              <h3 className="w-full max-w-md text-sm text-[#B4A5A5] sm:text-lg">
@@ -127,34 +128,33 @@ const DashboardLayout = () => {
                         <Graph graphData={safeTotalClicks} />
                     </div>
                   </div>
+                  </div>
 
-                  <div className="grid gap-5">
-                    <div className="rounded-2xl bg-[#151515] px-6 py-6 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B4A5A5]">Top Performer</p>
-                      <h2 className="mt-3 text-2xl font-black tracking-tight">
+                  <div className="xl:col-span-4">
+                    <div className="flex h-full flex-col rounded-2xl bg-[#151515] px-5 py-5 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-6 sm:py-6">
+                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Top Performer</p>
+                      <h2 className="mt-2.5 text-xl font-semibold tracking-[-0.02em] sm:text-2xl">
                         {topLink ? topLink.shortUrl : "No top link yet"}
                       </h2>
-                      <p className="mt-3 break-all text-sm text-[#B4A5A5]">
+                      <p className="mt-2 break-all text-sm leading-6 text-[#B4A5A5]">
                         {topLink ? topLink.originalUrl : "Create and share a short URL to start ranking performance."}
                       </p>
-                      <div className="mt-5 inline-flex rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
+                      <div className="mt-4 inline-flex w-fit rounded-full bg-white/5 px-4 py-2 text-sm font-medium tracking-[0.01em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
                         {topLink ? `${topLink.clickCount} clicks` : "Waiting for engagement"}
                       </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-[#151515] px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B4A5A5]">Dashboard Notes</p>
-                      <div className="mt-5 grid gap-4">
-                        <div className="rounded-2xl bg-[#1e1e1e] px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-                          <p className="text-sm font-bold text-white">Momentum</p>
-                          <p className="mt-1 text-sm text-[#B4A5A5]">
-                            {totalClickCount > 0 ? "Your links are collecting traffic. Keep promoting the strongest performers." : "No click activity yet. Share a live link to start filling this panel."}
+                      <div className="mt-4 grid gap-3">
+                        <div className="rounded-2xl bg-[#1e1e1e] px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                          <p className="text-sm font-medium tracking-[-0.01em] text-white">Original URL</p>
+                          <p className="mt-2 break-all text-sm leading-6 text-[#B4A5A5]">
+                            {topLink ? topLink.originalUrl : "Your highest performing short URL will appear here once clicks start coming in."}
                           </p>
                         </div>
-                        <div className="rounded-2xl bg-[#1e1e1e] px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-                          <p className="text-sm font-bold text-white">Coverage</p>
-                          <p className="mt-1 text-sm text-[#B4A5A5]">
-                            {totalLinks > 0 ? `${totalLinks} links are available for tracking and comparison.` : "Create your first short URL to unlock link-level analytics cards below."}
+                        <div className="rounded-2xl bg-[#1e1e1e] px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                          <p className="text-sm font-medium tracking-[-0.01em] text-white">Performance Snapshot</p>
+                          <p className="mt-2 text-sm leading-6 text-[#B4A5A5]">
+                            {topLink
+                              ? `This link is currently leading your dashboard with ${topLink.clickCount} recorded clicks.`
+                              : "Create and share a short link to start building your performance snapshot."}
                           </p>
                         </div>
                       </div>
@@ -164,11 +164,11 @@ const DashboardLayout = () => {
               </div>
             </div>
 
-            <div className='pt-8'>
-              <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div className='pt-1'>
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.22em] text-[#B4A5A5]">Link Intelligence</p>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                  <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">Link Intelligence</p>
+                  <h2 className="mt-1.5 text-2xl font-bold tracking-[-0.03em] text-white sm:text-3xl">
                     Your shortened links
                   </h2>
                 </div>
@@ -176,7 +176,7 @@ const DashboardLayout = () => {
               {!isLoading && safeShortenUrls.length === 0 ? (
                 <div className="flex justify-center pt-10">
                   <div className="flex items-center justify-center gap-3 rounded-2xl bg-[#1e1e1e] px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                    <h1 className="font-montserrat text-[14px] font-semibold text-white sm:text-[18px]">
+                    <h1 className="text-[14px] font-medium tracking-[-0.01em] text-white sm:text-[18px]">
                       You haven't created any short link yet
                     </h1>
                     <FaLink className="text-[#B4A5A5] sm:text-xl text-sm" />

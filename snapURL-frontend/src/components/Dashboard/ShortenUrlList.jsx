@@ -3,7 +3,7 @@ import ShortenItem from './ShortenItem'
 
 const ShortenUrlList = ({ data }) => {
   return (
-    <div className='my-6 grid gap-5'>
+    <div className='grid gap-4'>
         {data.map((item) => (
             <ShortenItem key={item.id} {...item} />
         ))}

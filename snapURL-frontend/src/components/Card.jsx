@@ -14,7 +14,7 @@ const Card = ({ title, desc, icon: Icon, accentClass = "text-[#B4A5A5]", accentB
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-xl font-black tracking-tight text-white">{title}</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.02em] text-white">{title}</h1>
         </div>
         {Icon && (
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentBgClass} ${accentClass} transition-transform duration-200 group-hover:scale-105`}>

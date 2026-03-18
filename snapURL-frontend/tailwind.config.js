@@ -18,8 +18,7 @@ export default {
         right: "10px 0px 10px -5px rgba(0, 0, 0, 0.3)",
       },
       fontFamily: {
-        roboto: ["Roboto", "sans-serif"],
-        montserrat: ["Montserrat"],
+        sans: ["Inter", "sans-serif"],
       },
     },
   },

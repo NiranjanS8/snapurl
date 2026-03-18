@@ -24,6 +24,8 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
         /^https?:\/\//,
         ""
       );
+    const shortLink = `${subDomain}/s/${shortUrl}`;
+    const createdDate = dayjs(createdAt).format("MMM DD, YYYY");
 
     const analyticsHandler = (shortUrl) => {
         if (!analyticToggle) {
@@ -61,97 +63,71 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
 
   return (
     <div className="overflow-hidden rounded-2xl bg-[#1e1e1e] shadow-[0_16px_36px_rgba(0,0,0,0.2)] transition-all duration-200">
-    <div className="flex flex-col gap-6 bg-[#1e1e1e] px-6 py-6 sm:px-7">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1 space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-[#151515] px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
-              Live Link
+    <div className="flex flex-col gap-4 bg-[#1e1e1e] px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="rounded-full bg-[#151515] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
+              Live
             </span>
-            <span className="rounded-full bg-[#151515] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
-              {clickCount === 1 ? "1 Click" : `${clickCount} Clicks`}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-white">
             <Link
               target='_'
-              className='break-all text-xl font-black tracking-tight text-white sm:text-2xl'
+              className='min-w-0 break-all text-base font-semibold tracking-[-0.02em] text-white sm:text-lg'
               to={import.meta.env.VITE_REACT_FRONT_END_URL + "/s/" + `${shortUrl}`}>
-                  {subDomain + "/s/" + `${shortUrl}`}
+                  {shortLink}
             </Link>
-            <FaExternalLinkAlt className="shrink-0 text-[#B4A5A5]" />
-          </div>
-
-          <div className="rounded-2xl bg-[#151515] px-4 py-3 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#B4A5A5]">
-              Original URL
-            </p>
-            <h3 className="mt-2 break-all text-[15px] font-medium text-white sm:text-[16px]">
-              {originalUrl}
-            </h3>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-[#151515] px-4 py-4 text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-              <div className="flex items-center gap-2 text-[#B4A5A5]">
-                <MdOutlineAdsClick className="text-[22px]" />
-                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#B4A5A5]">
-                  Engagement
-                </span>
-              </div>
-              <div className="mt-3 text-3xl font-black leading-none">{clickCount}</div>
-              <div className="mt-1 text-sm text-[#B4A5A5]">
-                {clickCount === 1 ? "Total click" : "Total clicks"}
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-              <div className="flex items-center gap-2 text-[#B4A5A5]">
-                <FaRegCalendarAlt />
-                <span className="text-xs font-bold uppercase tracking-[0.16em]">
-                  Created
-                </span>
-              </div>
-              <div className="mt-3 text-lg font-bold text-white">
-                {dayjs(createdAt).format("MMM DD, YYYY")}
-              </div>
-              <div className="mt-1 text-sm text-[#B4A5A5]">
-                {dayjs(createdAt).format("hh:mm A")}
-              </div>
-            </div>
+            <FaExternalLinkAlt className="shrink-0 text-sm text-[#B4A5A5]" />
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-            <CopyToClipboard
-                onCopy={() => setIsCopied(true)}
-                text={`${import.meta.env.VITE_REACT_FRONT_END_URL + "/s/" + `${shortUrl}`}`}
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#151515] px-3 py-2 text-sm text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
+              <MdOutlineAdsClick className="text-base text-[#B4A5A5]" />
+              <span className="font-semibold tracking-[-0.01em]">{clickCount}</span>
+              <span className="text-xs text-[#B4A5A5]">{clickCount === 1 ? "click" : "clicks"}</span>
+            </div>
+            <div
+                onClick={() => analyticsHandler(shortUrl)}
+                className="flex cursor-pointer items-center gap-2 rounded-full bg-[#301B3F] px-4 py-2.5 text-sm font-medium tracking-[0.01em] text-white transition-transform duration-150 hover:bg-[#3C415C]"
             >
-                <div className="flex cursor-pointer items-center gap-2 rounded-full bg-[#151515] px-5 py-3 font-semibold text-white transition-transform duration-150 hover:bg-[#301B3F]">
-                <button className="">{isCopied ? "Copied" : "Copy"}</button>
+                <button>{analyticToggle ? "Hide Analytics" : "Analytics"}</button>
+                <MdAnalytics className="text-md" />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2.5 text-sm text-[#B4A5A5] lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 rounded-xl bg-[#151515] px-3.5 py-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)] lg:flex-1">
+          <span className="mr-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">Original</span>
+          <span className="break-all text-sm text-white/92">{originalUrl}</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 lg:justify-end">
+          <CopyToClipboard
+              onCopy={() => setIsCopied(true)}
+              text={`${import.meta.env.VITE_REACT_FRONT_END_URL + "/s/" + `${shortUrl}`}`}
+          >
+              <div className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#151515] px-3.5 py-2.5 text-sm font-medium tracking-[0.01em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition-transform duration-150 hover:bg-[#301B3F]">
+                <button>{isCopied ? "Copied" : "Copy"}</button>
                 {isCopied ? (
                     <LiaCheckSolid className="text-md" />
                 ) : (
                     <IoCopy className="text-md" />
                 )}
-                </div>
-            </CopyToClipboard>
-
-            <div
-                onClick={() => analyticsHandler(shortUrl)}
-                className="flex cursor-pointer items-center gap-2 rounded-full bg-[#301B3F] px-5 py-3 font-semibold text-white transition-transform duration-150 hover:bg-[#3C415C]"
-            >
-                <button>{analyticToggle ? "Hide Analytics" : "Analytics"}</button>
-                <MdAnalytics className="text-md" />
+              </div>
+          </CopyToClipboard>
+          <div className="inline-flex items-center gap-2 rounded-xl bg-[#151515] px-3 py-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+            <FaRegCalendarAlt className="text-sm" />
+            <span className="text-sm text-white/92">{createdDate}</span>
           </div>
-          </div>
+        </div>
       </div>
+
         <div className={`${
             analyticToggle ? "flex" : "hidden"
-          } min-h-96 relative w-full overflow-hidden rounded-2xl bg-[#151515] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.18)] sm:p-5`}>
+          } relative min-h-[300px] w-full overflow-hidden rounded-2xl bg-[#151515] p-3.5 shadow-[0_12px_28px_rgba(0,0,0,0.18)] sm:p-4`}>
             {loader ? (
-                <div className="min-h-[calc(450px-140px)] flex justify-center items-center w-full">
+                <div className="flex min-h-[220px] w-full items-center justify-center">
                     <div className="flex flex-col items-center gap-1">
                     <Hourglass
                         visible={true}
@@ -168,10 +144,10 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
                 ) : ( 
                     <>{analyticsData.length === 0 && (
                         <div className="absolute inset-0 m-auto flex w-full flex-col items-center justify-center px-6 text-center">
-                            <h1 className="mb-2 text-[15px] font-bold text-white sm:text-2xl">
+                            <h1 className="mb-2 text-[15px] font-semibold tracking-[-0.02em] text-white sm:text-xl">
                                 No Data For This Time Period
                             </h1>
-                            <h3 className="w-full max-w-md text-[12px] text-[#B4A5A5] sm:text-lg">
+                            <h3 className="w-full max-w-md text-[12px] text-[#B4A5A5] sm:text-base">
                                 Share your short link to view where your engagements are
                                 coming from
                             </h3>

@@ -62,7 +62,7 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
         className="relative w-[360px] rounded-[28px] pt-8 pb-5 px-4 sm:w-[450px] sm:px-8"
       >
 
-        <h1 className="font-montserrat sm:mt-0 mt-3 text-center font-bold sm:text-2xl text-[22px] text-white">
+        <h1 className="mt-3 text-center text-[22px] font-semibold tracking-[-0.02em] text-white sm:mt-0 sm:text-2xl">
                 Create New Shorten Url
         </h1>
 
@@ -82,7 +82,7 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
         </div>
 
         <button
-          className="my-3 w-32 rounded-full bg-[#301B3F] py-2 font-semibold text-white transition-colors hover:bg-[#3C415C]"
+          className="my-3 w-32 rounded-full bg-[#301B3F] py-2 font-medium tracking-[0.01em] text-white transition-colors hover:bg-[#3C415C]"
           type="text"
         >
           {loading ? "Loading..." : "Create"}

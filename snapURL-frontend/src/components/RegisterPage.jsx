@@ -46,10 +46,10 @@ const RegisterPage = () => {
         <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <form onSubmit={handleSubmit(registerHandler)}
             className="w-full rounded-2xl bg-[#1e1e1e] px-5 py-8 shadow-[0_18px_40px_rgba(0,0,0,0.22)] sm:px-8">
-            <p className="text-center text-xs font-black uppercase tracking-[0.24em] text-[#B4A5A5]">
+            <p className="text-center text-xs font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">
               Get Started
             </p>
-            <h1 className="mt-3 text-center text-3xl font-black tracking-tight text-white lg:text-4xl">
+            <h1 className="mt-3 text-center text-3xl font-bold tracking-[-0.03em] text-white lg:text-4xl">
                 Register Here
             </h1>
 
@@ -96,22 +96,22 @@ const RegisterPage = () => {
             <button
                 disabled={loader}
                 type='submit'
-                className='my-4 w-full rounded-full bg-[#301B3F] py-3 font-semibold text-white hover:bg-[#3C415C] disabled:opacity-70'>
+                className='my-4 w-full rounded-full bg-[#301B3F] py-3 font-medium tracking-[0.01em] text-white hover:bg-[#3C415C] disabled:opacity-70'>
                 {loader ? "Loading..." : "Register"}
             </button>
 
             <p className='mt-6 text-center text-sm text-[#B4A5A5]'>
                 Already have an account? 
                 <Link
-                    className='font-semibold hover:text-black'
+                    className='font-medium hover:text-black'
                     to="/login">
                         <span className='text-btnColor'> Login</span>
                 </Link>
             </p>
         </form>
           <div className="hidden rounded-2xl bg-[#1e1e1e] px-8 py-10 text-white shadow-[0_18px_40px_rgba(0,0,0,0.22)] lg:block">
-            <p className="text-sm font-black uppercase tracking-[0.28em] text-[#B4A5A5]">New workspace</p>
-            <h1 className="mt-4 text-5xl font-black tracking-tight">
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">New workspace</p>
+            <h1 className="mt-4 text-5xl font-bold tracking-[-0.03em]">
               Create an account and bring your links into focus.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-[#B4A5A5]">

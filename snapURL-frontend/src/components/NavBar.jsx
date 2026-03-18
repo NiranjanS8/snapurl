@@ -20,7 +20,7 @@ const Navbar = () => {
     <div className="sticky top-0 z-50 bg-[#151515]/96 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full items-center justify-between px-4 lg:px-14 sm:px-8">
         <Link to="/">
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-[-0.03em] text-white">
             SnapURL
           </h1>
         </Link>
@@ -31,7 +31,7 @@ const Navbar = () => {
         >
           <li>
             <Link
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+              className={`rounded-full px-4 py-2 text-sm font-medium tracking-[0.01em] ${
                 path === "/" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
               }`}
               to="/"
@@ -41,7 +41,7 @@ const Navbar = () => {
           </li>
           <li>
             <Link
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+              className={`rounded-full px-4 py-2 text-sm font-medium tracking-[0.01em] ${
                 path === "/about" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
               }`}
               to="/about"
@@ -52,7 +52,7 @@ const Navbar = () => {
           {token && (
             <li>
               <Link
-                className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                className={`rounded-full px-4 py-2 text-sm font-medium tracking-[0.01em] ${
                   path === "/dashboard" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
                 }`}
                 to="/dashboard"
@@ -63,7 +63,7 @@ const Navbar = () => {
           )}
           {!token && (
             <Link to="/register">
-              <li className="rounded-full bg-[#301B3F] px-5 py-2 text-center text-sm font-semibold text-white hover:bg-[#3C415C]">
+              <li className="rounded-full bg-[#301B3F] px-5 py-2 text-center text-sm font-medium tracking-[0.01em] text-white hover:bg-[#3C415C]">
                 SignUp
               </li>
             </Link>
@@ -72,7 +72,7 @@ const Navbar = () => {
           {token && (
             <button
              onClick={onLogOutHandler}
-             className="rounded-full bg-[#301B3F] px-5 py-2 text-sm font-semibold text-white hover:bg-[#3C415C]">
+             className="rounded-full bg-[#301B3F] px-5 py-2 text-sm font-medium tracking-[0.01em] text-white hover:bg-[#3C415C]">
               LogOut
             </button>
           )}
