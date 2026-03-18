@@ -2,6 +2,7 @@ package com.snapurl.service.controllers;
 
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.models.Users;
+import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.UrlMappingService;
@@ -19,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.security.Principal;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,12 +59,14 @@ class UrlMappingControllerTest {
                 new RateLimitResult(false, 3, 4, 0, 45)
         );
 
-        var response = controller.createPublicShortUrl(Map.of("originalUrl", "https://example.com"), httpServletRequest);
+        RateLimitExceededException exception = assertThrows(
+                RateLimitExceededException.class,
+                () -> controller.createPublicShortUrl(Map.of("originalUrl", "https://example.com"), httpServletRequest)
+        );
 
-        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
-        assertEquals("3", response.getHeaders().getFirst("X-RateLimit-Limit"));
-        assertEquals("0", response.getHeaders().getFirst("X-RateLimit-Remaining"));
-        assertEquals("45", response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER));
+        assertEquals("Too many public shorten requests. Please try again in a minute.", exception.getMessage());
+        assertEquals(3, exception.getRateLimitResult().getLimit());
+        assertEquals(45, exception.getRateLimitResult().getRetryAfterSeconds());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.snapurl.service.service;
 
+import com.google.common.net.InternetDomainName;
 import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
@@ -34,6 +35,7 @@ public class UrlMappingService {
     private static final String SHORT_URL_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int GENERATED_SHORT_URL_LENGTH = 8;
     private static final int MAX_GENERATION_ATTEMPTS = 10;
+    private static final String HOSTNAME_PATTERN = "^(?=.{4,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,24}$";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Set<String> RESERVED_ALIASES = Set.of(
             "api", "admin", "login", "register", "signup", "auth", "public", "dashboard", "error", "s"
@@ -159,7 +161,10 @@ public class UrlMappingService {
         try {
             URI uri = URI.create(candidate);
             String host = uri.getHost();
-            return host != null && !host.isBlank() && host.contains(".");
+            return host != null
+                    && !host.isBlank()
+                    && host.matches(HOSTNAME_PATTERN)
+                    && InternetDomainName.from(host).hasPublicSuffix();
         } catch (IllegalArgumentException ex) {
             return false;
         }

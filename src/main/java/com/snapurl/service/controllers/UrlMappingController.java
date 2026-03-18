@@ -5,6 +5,7 @@ import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.service.RateLimitResult;
+import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
@@ -61,20 +62,11 @@ public class UrlMappingController {
                 Duration.ofMinutes(1)
         );
         if (!rateLimitResult.isAllowed()) {
-            return withRateLimitHeaders(
-                    ResponseEntity.status(429),
-                    rateLimitResult
-            ).body(Map.of("message", "Too many public shorten requests. Please try again in a minute."));
+            throw new RateLimitExceededException("Too many public shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
-        try {
-            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, null);
-            return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
-        } catch (IllegalArgumentException ex) {
-            return withRateLimitHeaders(ResponseEntity.badRequest(), rateLimitResult).body(Map.of("message", ex.getMessage()));
-        } catch (IllegalStateException ex) {
-            return withRateLimitHeaders(ResponseEntity.status(409), rateLimitResult).body(Map.of("message", ex.getMessage()));
-        }
+        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, null);
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
     @PostMapping("/shorten")
@@ -92,32 +84,19 @@ public class UrlMappingController {
                 Duration.ofMinutes(1)
         );
         if (!rateLimitResult.isAllowed()) {
-            return withRateLimitHeaders(
-                    ResponseEntity.status(429),
-                    rateLimitResult
-            ).body(Map.of("message", "Too many shorten requests. Please try again in a minute."));
+            throw new RateLimitExceededException("Too many shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
-        try {
-            UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, user);
-            return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
-        } catch (IllegalArgumentException ex) {
-            return withRateLimitHeaders(ResponseEntity.badRequest(), rateLimitResult).body(Map.of("message", ex.getMessage()));
-        } catch (IllegalStateException ex) {
-            return withRateLimitHeaders(ResponseEntity.status(409), rateLimitResult).body(Map.of("message", ex.getMessage()));
-        }
+        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, user);
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> deleteShortUrl(@PathVariable Long id, Principal principal) {
         Users user = userService.findByEmail(principal.getName());
-        try {
-            urlMappingService.deleteUrl(id, user);
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
-        }
+        urlMappingService.deleteUrl(id, user);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/myurls")

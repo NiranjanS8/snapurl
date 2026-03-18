@@ -12,6 +12,8 @@ import api from "../api/api";
 const GUEST_LIMIT = 3;
 const GUEST_STORAGE_KEY = "SNAPURL_GUEST_SHORTENS";
 const RESERVED_ALIASES = new Set(["api", "admin", "login", "register", "signup", "auth", "public", "dashboard", "error", "s"]);
+const STRICT_URL_PATTERN =
+  /^(https?:\/\/)?(?=.{4,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}(?::\d{2,5})?(?:\/[^\s]*)?$/;
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -29,6 +31,11 @@ const LandingPage = () => {
 
   const createShortLinkHandler = async () => {
     if (!originalUrl.trim()) {
+      setCardError('We\'ll need a valid URL, like "super-long-link.com/shorten-it"');
+      return;
+    }
+
+    if (!STRICT_URL_PATTERN.test(originalUrl.trim())) {
       setCardError('We\'ll need a valid URL, like "super-long-link.com/shorten-it"');
       return;
     }

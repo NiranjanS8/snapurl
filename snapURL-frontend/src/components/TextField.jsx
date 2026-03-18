@@ -11,6 +11,9 @@ const TextField = ({
     value,
     placeholder,
   }) => {
+    const strictUrlPattern =
+      /^(https?:\/\/)?(?=.{4,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}(?::\d{2,5})?(?:\/[^\s]*)?$/;
+
     return (
       <div className="flex flex-col gap-1">
         <label
@@ -43,8 +46,7 @@ const TextField = ({
                   }
                 : type === "url"
                 ? {
-                    value:
-                      /^(https?:\/\/)?(([a-zA-Z0-9\u00a1-\uffff-]+\.)+[a-zA-Z\u00a1-\uffff]{2,})(:\d{2,5})?(\/[^\s]*)?$/,
+                    value: strictUrlPattern,
                     message: "Please enter a valid url",
                   }
                 : null,

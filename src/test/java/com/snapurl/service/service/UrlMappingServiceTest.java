@@ -59,6 +59,39 @@ class UrlMappingServiceTest {
     }
 
     @Test
+    void createShortUrlRejectsInvalidShortDomains() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> urlMappingService.createShortUrl("a.a", null, user)
+        );
+
+        assertEquals(UrlMappingService.INVALID_URL_MESSAGE, exception.getMessage());
+        verify(urlMappingRepo, never()).save(any());
+    }
+
+    @Test
+    void createShortUrlRejectsNumericLeadingHostWithShortTld() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> urlMappingService.createShortUrl("2.ae", null, user)
+        );
+
+        assertEquals(UrlMappingService.INVALID_URL_MESSAGE, exception.getMessage());
+        verify(urlMappingRepo, never()).save(any());
+    }
+
+    @Test
+    void createShortUrlRejectsUnknownPublicSuffix() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> urlMappingService.createShortUrl("as.zxzxzxcd", null, user)
+        );
+
+        assertEquals(UrlMappingService.INVALID_URL_MESSAGE, exception.getMessage());
+        verify(urlMappingRepo, never()).save(any());
+    }
+
+    @Test
     void createShortUrlRejectsReservedAlias() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
