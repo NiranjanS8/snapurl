@@ -10,7 +10,7 @@ import java.time.Duration;
 public class NoOpRateLimitService implements RateLimitService {
 
     @Override
-    public boolean isAllowed(String key, long limit, Duration window) {
-        return true;
+    public RateLimitResult check(String key, long limit, Duration window) {
+        return new RateLimitResult(true, limit, 0, limit, 0);
     }
 }

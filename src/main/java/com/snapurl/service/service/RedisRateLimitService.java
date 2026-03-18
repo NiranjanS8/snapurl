@@ -1,32 +1,70 @@
 package com.snapurl.service.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 
+@Slf4j
 @Service
 @ConditionalOnProperty(name = {"snapurl.redis.enabled", "snapurl.rate-limit.enabled"}, havingValue = "true")
 public class RedisRateLimitService implements RateLimitService {
 
-    private final StringRedisTemplate redisTemplate;
+    private static final String RATE_LIMIT_SCRIPT = """
+            local current = redis.call('INCR', KEYS[1])
+            if current == 1 then
+              redis.call('EXPIRE', KEYS[1], ARGV[2])
+            end
+            local ttl = redis.call('TTL', KEYS[1])
+            return {current, ttl}
+            """;
 
-    public RedisRateLimitService(StringRedisTemplate redisTemplate) {
+    private final StringRedisTemplate redisTemplate;
+    private final boolean failOpen;
+    private final DefaultRedisScript<List> rateLimitScript;
+
+    public RedisRateLimitService(
+            StringRedisTemplate redisTemplate,
+            @org.springframework.beans.factory.annotation.Value("${snapurl.rate-limit.fail-open:true}") boolean failOpen
+    ) {
         this.redisTemplate = redisTemplate;
+        this.failOpen = failOpen;
+        this.rateLimitScript = new DefaultRedisScript<>();
+        this.rateLimitScript.setScriptText(RATE_LIMIT_SCRIPT);
+        this.rateLimitScript.setResultType(List.class);
     }
 
     @Override
-    public boolean isAllowed(String key, long limit, Duration window) {
-        Long currentCount = redisTemplate.opsForValue().increment(key);
-        if (currentCount == null) {
-            return true;
-        }
+    public RateLimitResult check(String key, long limit, Duration window) {
+        try {
+            List result = redisTemplate.execute(
+                    rateLimitScript,
+                    List.of(key),
+                    String.valueOf(limit),
+                    String.valueOf(window.getSeconds())
+            );
 
-        if (currentCount == 1L) {
-            redisTemplate.expire(key, window);
-        }
+            if (result == null || result.size() < 2) {
+                return fallback(limit);
+            }
 
-        return currentCount <= limit;
+            long currentCount = ((Number) result.get(0)).longValue();
+            long ttlSeconds = Math.max(((Number) result.get(1)).longValue(), 0L);
+            boolean allowed = currentCount <= limit;
+            long remaining = Math.max(limit - currentCount, 0L);
+
+            return new RateLimitResult(allowed, limit, currentCount, remaining, allowed ? 0L : ttlSeconds);
+        } catch (RuntimeException ex) {
+            log.warn("Rate limit check failed for key={}", key, ex);
+            return fallback(limit);
+        }
+    }
+
+    private RateLimitResult fallback(long limit) {
+        return new RateLimitResult(failOpen, limit, 0L, limit, 0L);
     }
 }

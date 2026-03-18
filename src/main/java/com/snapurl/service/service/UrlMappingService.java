@@ -43,6 +43,7 @@ public class UrlMappingService {
     private ClickEventRepo clickEventRepo;
     private ClickAnalyticsDispatcher clickAnalyticsDispatcher;
     private ShortUrlCacheService shortUrlCacheService;
+    private AnalyticsCacheService analyticsCacheService;
 
     public UrlMappingDTO createShortUrl(String originalUrl, String customAlias, Users user) {
         if (!isValidUrl(originalUrl)) {
@@ -187,9 +188,14 @@ public class UrlMappingService {
     }
 
     public List<ClickEventDTO> getClickEventByDate(String shortUrl, LocalDateTime start, LocalDateTime end) {
+        List<ClickEventDTO> cachedAnalytics = analyticsCacheService.getUrlAnalytics(shortUrl, start, end);
+        if (cachedAnalytics != null) {
+            return cachedAnalytics;
+        }
+
         UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
         if(urlMapping != null) {
-            return clickEventRepo.findByUrlMappingAndClickTimeBetween(urlMapping, start, end)
+            List<ClickEventDTO> analytics = clickEventRepo.findByUrlMappingAndClickTimeBetween(urlMapping, start, end)
                     .stream().collect(Collectors.groupingBy(click -> click.getClickTime().toLocalDate(),
                             Collectors.counting())).entrySet().stream().map(entry -> {
                                 ClickEventDTO dto = new ClickEventDTO();
@@ -197,15 +203,28 @@ public class UrlMappingService {
                                 dto.setClickCount(entry.getValue());
                                 return dto;
                     } ).collect(Collectors.toList());
+            analyticsCacheService.putUrlAnalytics(shortUrl, start, end, analytics);
+            return analytics;
         }
         return Collections.emptyList();
     }
 
     public Map<LocalDate, Long> getTotalClicksByUserAndDate(Users user, LocalDate start, LocalDate end) {
+        if (user != null && user.getId() != null) {
+            Map<LocalDate, Long> cachedTotalClicks = analyticsCacheService.getTotalClicks(user.getId(), start, end);
+            if (cachedTotalClicks != null) {
+                return cachedTotalClicks;
+            }
+        }
+
         List<UrlMapping> urlMappings = urlMappingRepo.findByUser(user);
-        return clickEventRepo.findByUrlMappingInAndClickTimeBetween(urlMappings, start.atStartOfDay(), end.plusDays(1).atStartOfDay())
+        Map<LocalDate, Long> totalClicks = clickEventRepo.findByUrlMappingInAndClickTimeBetween(urlMappings, start.atStartOfDay(), end.plusDays(1).atStartOfDay())
                 .stream().collect(Collectors.groupingBy(click -> click.getClickTime().toLocalDate(),
                         Collectors.counting()));
+        if (user != null && user.getId() != null) {
+            analyticsCacheService.putTotalClicks(user.getId(), start, end, totalClicks);
+        }
+        return totalClicks;
     }
 
     public UrlMapping getOriginalUrl(String shortUrl) {
@@ -240,6 +259,10 @@ public class UrlMappingService {
         clickEventRepo.deleteByUrlMapping(urlMapping);
         urlMappingRepo.delete(urlMapping);
         shortUrlCacheService.evict(urlMapping.getShortUrl());
+        analyticsCacheService.evictForShortUrl(urlMapping.getShortUrl());
+        if (urlMapping.getUser() != null && urlMapping.getUser().getId() != null) {
+            analyticsCacheService.evictForUser(urlMapping.getUser().getId());
+        }
     }
 
     private boolean isExpired(UrlMapping urlMapping) {

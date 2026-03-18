@@ -4,9 +4,13 @@ import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.Users;
+import com.snapurl.service.service.RateLimitResult;
+import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
-import lombok.AllArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -14,32 +18,62 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/urls")
-@AllArgsConstructor
 public class UrlMappingController {
 
-    private UrlMappingService urlMappingService;
-    private UserService userService;
+    private final UrlMappingService urlMappingService;
+    private final UserService userService;
+    private final RateLimitService rateLimitService;
+    @Value("${snapurl.rate-limit.public-shorten-per-minute:10}")
+    private long publicShortenPerMinute;
+    @Value("${snapurl.rate-limit.auth-shorten-per-minute:30}")
+    private long authShortenPerMinute;
+    @Value("${snapurl.rate-limit.trust-forwarded-header:false}")
+    private boolean trustForwardedHeader;
+
+    public UrlMappingController(
+            UrlMappingService urlMappingService,
+            UserService userService,
+            RateLimitService rateLimitService
+    ) {
+        this.urlMappingService = urlMappingService;
+        this.userService = userService;
+        this.rateLimitService = rateLimitService;
+    }
 
     // {"originalUrl": "https://www.example.com/some/long/url"}
     // https://snapurl.com/v9AuvEYE  -->  https://www.example.com/some/long/url
 
     @PostMapping("/public/shorten")
-    public ResponseEntity<?> createPublicShortUrl(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> createPublicShortUrl(@RequestBody Map<String, String> request, HttpServletRequest httpServletRequest) {
         String originalUrl = request.get("originalUrl");
         String customAlias = request.get("customAlias");
+
+        RateLimitResult rateLimitResult = rateLimitService.check(
+                "snapurl:rate-limit:public-shorten:" + extractClientIp(httpServletRequest),
+                publicShortenPerMinute,
+                Duration.ofMinutes(1)
+        );
+        if (!rateLimitResult.isAllowed()) {
+            return withRateLimitHeaders(
+                    ResponseEntity.status(429),
+                    rateLimitResult
+            ).body(Map.of("message", "Too many public shorten requests. Please try again in a minute."));
+        }
+
         try {
             UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, null);
-            return ResponseEntity.ok(urlMappingDTO);
+            return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+            return withRateLimitHeaders(ResponseEntity.badRequest(), rateLimitResult).body(Map.of("message", ex.getMessage()));
         } catch (IllegalStateException ex) {
-            return ResponseEntity.status(409).body(Map.of("message", ex.getMessage()));
+            return withRateLimitHeaders(ResponseEntity.status(409), rateLimitResult).body(Map.of("message", ex.getMessage()));
         }
     }
 
@@ -51,13 +85,26 @@ public class UrlMappingController {
         String originalUrl = request.get("originalUrl");
         String customAlias = request.get("customAlias");
         Users user = userService.findByEmail(principal.getName());
+
+        RateLimitResult rateLimitResult = rateLimitService.check(
+                "snapurl:rate-limit:auth-shorten:" + principal.getName(),
+                authShortenPerMinute,
+                Duration.ofMinutes(1)
+        );
+        if (!rateLimitResult.isAllowed()) {
+            return withRateLimitHeaders(
+                    ResponseEntity.status(429),
+                    rateLimitResult
+            ).body(Map.of("message", "Too many shorten requests. Please try again in a minute."));
+        }
+
         try {
             UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, user);
-            return ResponseEntity.ok(urlMappingDTO);
+            return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+            return withRateLimitHeaders(ResponseEntity.badRequest(), rateLimitResult).body(Map.of("message", ex.getMessage()));
         } catch (IllegalStateException ex) {
-            return ResponseEntity.status(409).body(Map.of("message", ex.getMessage()));
+            return withRateLimitHeaders(ResponseEntity.status(409), rateLimitResult).body(Map.of("message", ex.getMessage()));
         }
     }
 
@@ -135,6 +182,26 @@ public class UrlMappingController {
         LocalDate end = LocalDate.parse(endDate, formatter);
         Map<LocalDate, Long> totalClicks = urlMappingService.getTotalClicksByUserAndDate(user, start, end);
         return ResponseEntity.ok(totalClicks);
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        if (!trustForwardedHeader) {
+            return request.getRemoteAddr();
+        }
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    private ResponseEntity.BodyBuilder withRateLimitHeaders(ResponseEntity.BodyBuilder builder, RateLimitResult result) {
+        builder.header("X-RateLimit-Limit", String.valueOf(result.getLimit()));
+        builder.header("X-RateLimit-Remaining", String.valueOf(result.getRemaining()));
+        if (!result.isAllowed() && result.getRetryAfterSeconds() > 0) {
+            builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(result.getRetryAfterSeconds()));
+        }
+        return builder;
     }
 
 }
