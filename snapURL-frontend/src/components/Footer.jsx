@@ -3,28 +3,32 @@ import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 
 const Footer = () => {
   return (
-    <footer className="bg-custom-gradient text-white py-8 z-40 relative">
-      <div className="container mx-auto px-6 lg:px-14 flex flex-col lg:flex-row lg:justify-between items-center gap-4">
+    <footer className="relative z-40 mt-14 bg-[#151515] py-10 shadow-[0_-10px_30px_rgba(0,0,0,0.18)]">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 lg:flex-row lg:items-center lg:justify-between lg:px-14">
         <div className="text-center lg:text-left">
-          <h2 className="text-3xl font-bold mb-2">SnapURL</h2>
-          <p>Simplifying URL shortening for efficient sharing</p>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-[#B4A5A5]">SnapURL</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Share smarter links</h2>
+          <p className="mt-3 max-w-md text-sm leading-6 text-[#B4A5A5]">
+            Simplifying URL shortening with a cleaner command center for sharing, tracking, and managing every link.
+          </p>
         </div>
 
-        <p className="mt-4 lg:mt-0">
-          &copy; 2024 SnapURL. All rights reserved.
-        </p>
+        <div className="rounded-2xl bg-[#1e1e1e] px-6 py-5 text-center text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B4A5A5]">Built for speed</p>
+          <p className="mt-3 text-sm text-[#B4A5A5]">&copy; 2024 SnapURL. All rights reserved.</p>
+        </div>
 
-        <div className="flex space-x-6 mt-4 lg:mt-0">
-          <a href="#" className="hover:text-gray-200">
+        <div className="mt-1 flex justify-center space-x-4 lg:mt-0">
+          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaFacebook size={24} />
           </a>
-          <a href="#" className="hover:text-gray-200">
+          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaTwitter size={24} />
           </a>
-          <a href="#" className="hover:text-gray-200">
+          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaInstagram size={24} />
           </a>
-          <a href="#" className="hover:text-gray-200">
+          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaLinkedin size={24} />
           </a>
         </div>

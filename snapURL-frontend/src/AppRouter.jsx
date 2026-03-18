@@ -22,18 +22,21 @@ const AppRouter = () => {
         <>
         {!hideHeaderFooter && <Navbar /> }
         <Toaster position='bottom-center'/>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/s/:url" element={<ShortenUrlPage />} />
+        <main className={!hideHeaderFooter ? "relative overflow-hidden" : ""}>
+          {!hideHeaderFooter && <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(60,65,92,0.14),_transparent_22%),radial-gradient(circle_at_top_right,_rgba(48,27,63,0.18),_transparent_20%)]" />}
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/s/:url" element={<ShortenUrlPage />} />
 
-          <Route path="/register" element={<PrivateRoute publicPage={true}><RegisterPage /></PrivateRoute>} />
-          <Route path="/login" element={<PrivateRoute publicPage={true}><LoginPage /></PrivateRoute>} />
-          
-          <Route path="/dashboard" element={ <PrivateRoute publicPage={false}><DashboardLayout /></PrivateRoute>} />
-          <Route path="/error" element={ <ErrorPage />} />
-          <Route path="*" element={ <ErrorPage message="We can't seem to find the page you're looking for"/>} />
-        </Routes>
+            <Route path="/register" element={<PrivateRoute publicPage={true}><RegisterPage /></PrivateRoute>} />
+            <Route path="/login" element={<PrivateRoute publicPage={true}><LoginPage /></PrivateRoute>} />
+            
+            <Route path="/dashboard" element={ <PrivateRoute publicPage={false}><DashboardLayout /></PrivateRoute>} />
+            <Route path="/error" element={ <ErrorPage />} />
+            <Route path="*" element={ <ErrorPage message="We can't seem to find the page you're looking for"/>} />
+          </Routes>
+        </main>
         {!hideHeaderFooter && <Footer />}
       </>
     );

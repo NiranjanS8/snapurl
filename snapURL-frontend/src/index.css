@@ -4,3 +4,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-montserrat;
+    background: #151515;
+    color: white;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  button,
+  a {
+    @apply transition-all duration-150;
+  }
+}

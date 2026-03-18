@@ -56,17 +56,17 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
 
 
   return (
-    <div className=" flex justify-center items-center bg-white rounded-md">
+    <div className="flex items-center justify-center rounded-2xl bg-[#1e1e1e] shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
     <form
         onSubmit={handleSubmit(createShortUrlHandler)}
-        className="sm:w-[450px] w-[360px] relative  shadow-custom pt-8 pb-5 sm:px-8 px-4 rounded-lg"
+        className="relative w-[360px] rounded-[28px] pt-8 pb-5 px-4 sm:w-[450px] sm:px-8"
       >
 
-        <h1 className="font-montserrat sm:mt-0 mt-3 text-center  font-bold sm:text-2xl text-[22px] text-slate-800 ">
+        <h1 className="font-montserrat sm:mt-0 mt-3 text-center font-bold sm:text-2xl text-[22px] text-white">
                 Create New Shorten Url
         </h1>
 
-        <hr className="mt-2 sm:mb-5 mb-3 text-slate-950" />
+        <div className="mt-2 mb-3 h-px bg-white/6 sm:mb-5" />
 
         <div>
           <TextField
@@ -82,7 +82,7 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
         </div>
 
         <button
-          className="bg-customRed font-semibold text-white w-32  bg-custom-gradient  py-2  transition-colors  rounded-md my-3"
+          className="my-3 w-32 rounded-full bg-[#301B3F] py-2 font-semibold text-white transition-colors hover:bg-[#3C415C]"
           type="text"
         >
           {loading ? "Loading..." : "Create"}
@@ -95,7 +95,7 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
               onClick={() => setOpen(false)}
               className=" absolute right-2 top-2  "
             >
-              <RxCross2 className="text-slate-800   text-3xl" />
+              <RxCross2 className="text-white text-3xl" />
             </button>
           </Tooltip>
         )}

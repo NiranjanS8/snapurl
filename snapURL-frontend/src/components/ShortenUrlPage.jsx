@@ -9,7 +9,14 @@ const ShortenUrlPage = () => {
             window.location.href = import.meta.env.VITE_BACKEND_URL + `/${url}`;
         }
     }, [url]);
-  return <p>Redirecting...</p>;
+  return (
+    <div className="flex min-h-screen items-center justify-center px-6">
+      <div className="rounded-2xl bg-[#1e1e1e] px-8 py-8 text-center shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-[#B4A5A5]">Redirecting</p>
+        <p className="mt-3 text-lg font-semibold text-white">Taking you to your destination...</p>
+      </div>
+    </div>
+  );
 }
 
 export default ShortenUrlPage

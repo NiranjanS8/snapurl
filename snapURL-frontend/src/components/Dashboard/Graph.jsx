@@ -20,30 +20,28 @@ ChartJS.register(
 );
 
 const Graph = ({ graphData }) => {
-  const labels = graphData?.map((item, i) => `${item.clickDate}`);
-  const userPerDaya = graphData?.map((item) => item.count ?? item.clickCount);
+  const labels = graphData?.map((item) => `${item.clickDate}`);
+  const clicksPerDay = graphData?.map((item) => item.count ?? item.clickCount);
 
   const data = {
     labels:
-     graphData.length > 0
+      graphData.length > 0
         ? labels
         : ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
     datasets: [
       {
         label: "Total Clicks",
         data:
-         graphData.length > 0
-            ? userPerDaya
+          graphData.length > 0
+            ? clicksPerDay
             : [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1],
-        backgroundColor:
-         graphData.length > 0 ? "#3b82f6" : "rgba(54, 162, 235, 0.1)",
-        borderColor: "#1D2327",
-        pointBorderColor: "red",
-        fill: true,
-        tension: 0.4,
-        barThickness: 20,
-        categoryPercentage: 1.5,
-        barPercentage: 1.5,
+        backgroundColor: graphData.length > 0 ? "rgba(60, 65, 92, 0.78)" : "rgba(180, 165, 165, 0.1)",
+        borderRadius: 12,
+        borderSkipped: false,
+        hoverBackgroundColor: "rgba(48, 27, 63, 0.82)",
+        barThickness: 22,
+        categoryPercentage: 0.72,
+        barPercentage: 0.9,
       },
     ],
   };
@@ -53,14 +51,33 @@ const Graph = ({ graphData }) => {
     responsive: true,
     plugins: {
       legend: {
-        display: true,
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: "#151515",
+        titleColor: "#ffffff",
+        bodyColor: "#B4A5A5",
+        displayColors: false,
+        padding: 12,
+        cornerRadius: 12,
       },
     },
     scales: {
       y: {
         beginAtZero: true,
+        border: {
+          display: false,
+        },
+        grid: {
+          color: "rgba(180, 165, 165, 0.08)",
+          drawTicks: false,
+        },
         ticks: {
-          // stepSize: 1,
+          color: "#B4A5A5",
+          font: {
+            size: 12,
+            weight: "600",
+          },
           callback: function (value) {
             if (Number.isInteger(value)) {
               return value.toString();
@@ -70,35 +87,45 @@ const Graph = ({ graphData }) => {
         },
         title: {
           display: true,
-          text: "Number Of Clicks",
+          text: "Clicks",
           font: {
-            family: "Arial",
-            size: 16,
-            weight: "bold",
-            color: "#FF0000",
+            size: 13,
+            weight: "700",
           },
+          color: "#ffffff",
         },
       },
       x: {
-        beginAtZero: true,
-        // ticks: {
-        //   stepSize: 1,
-        // },
+        border: {
+          display: false,
+        },
+        grid: {
+          display: false,
+          drawTicks: false,
+        },
+        ticks: {
+          color: "#B4A5A5",
+          font: {
+            size: 11,
+            weight: "600",
+          },
+          maxRotation: 0,
+          minRotation: 0,
+        },
         title: {
           display: true,
           text: "Date",
           font: {
-            family: "Arial",
-            size: 16,
-            weight: "bold",
-            color: "#FF0000",
+            size: 13,
+            weight: "700",
           },
+          color: "#ffffff",
         },
       },
     },
   };
 
-  return <Bar className=" w-full" data={data} options={options}></Bar>;
+  return <Bar className="w-full" data={data} options={options} />;
 };
 
 export default Graph;

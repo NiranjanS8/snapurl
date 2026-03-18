@@ -49,17 +49,31 @@ const LoginPage = () => {
     };
 
   return (
-    <div
-        className='min-h-[calc(100vh-64px)] flex justify-center items-center'>
+    <div className='min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10'>
+        <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="hidden rounded-2xl bg-[#1e1e1e] px-8 py-10 shadow-[0_18px_40px_rgba(0,0,0,0.22)] lg:block">
+            <p className="text-sm font-black uppercase tracking-[0.28em] text-[#B4A5A5]">Welcome back</p>
+            <h1 className="mt-4 text-5xl font-black tracking-tight text-white">
+              Step back into your link command center.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-[#B4A5A5]">
+              Log in to manage short links, review click activity, and keep everything moving from one clean dashboard.
+            </p>
+          </div>
         <form onSubmit={handleSubmit(loginHandler)}
-            className="sm:w-[450px] w-[360px]  shadow-custom py-8 sm:px-8 px-4 rounded-md">
-            <h1 className="text-center font-serif text-btnColor font-bold lg:text-3xl text-2xl">
+            className="w-full rounded-2xl bg-[#1e1e1e] px-5 py-8 shadow-[0_18px_40px_rgba(0,0,0,0.22)] sm:px-8">
+            <p className="text-center text-xs font-black uppercase tracking-[0.24em] text-[#B4A5A5]">
+              Account Access
+            </p>
+            <h1 className="mt-3 text-center text-3xl font-black tracking-tight text-white lg:text-4xl">
                 Login Here
             </h1>
 
-            <hr className='mt-2 mb-5 text-black'/>
+            <p className="mt-3 text-center text-sm text-[#B4A5A5]">
+              Enter your details to continue to the dashboard.
+            </p>
 
-            <div className="flex flex-col gap-3">
+            <div className="mt-8 flex flex-col gap-4">
                 <TextField
                     label="Email"
                     required
@@ -87,19 +101,20 @@ const LoginPage = () => {
             <button
                 disabled={loader}
                 type='submit'
-                className='bg-customRed font-semibold text-white  bg-custom-gradient w-full py-2 hover:text-slate-400 transition-colors duration-100 rounded-sm my-3'>
+                className='my-4 w-full rounded-full bg-[#301B3F] py-3 font-semibold text-white hover:bg-[#3C415C] disabled:opacity-70'>
                 {loader ? "Loading..." : "Login"}
             </button>
 
-            <p className='text-center text-sm text-slate-700 mt-6'>
+            <p className='mt-6 text-center text-sm text-[#B4A5A5]'>
                 Don't have an account? 
                 <Link
-                    className='font-semibold underline hover:text-black'
+                    className='font-semibold hover:text-black'
                     to="/register">
                         <span className='text-btnColor'> SignUp</span>
                 </Link>
             </p>
         </form>
+        </div>
     </div>
   )
 }

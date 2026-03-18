@@ -4,7 +4,6 @@ import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 import { useStoreContext } from "../contextApi/ContextApi";
 
-
 const Navbar = () => {
   const navigate = useNavigate();
   const { token, setToken } = useStoreContext();
@@ -18,32 +17,32 @@ const Navbar = () => {
   };
 
   return (
-    <div className="h-16 bg-custom-gradient  z-50 flex items-center sticky top-0 ">
-      <div className="lg:px-14 sm:px-8 px-4 w-full flex justify-between">
+    <div className="sticky top-0 z-50 bg-[#151515]/96 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full items-center justify-between px-4 lg:px-14 sm:px-8">
         <Link to="/">
-          <h1 className="font-bold text-3xl text-white italic sm:mt-0 mt-2">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             SnapURL
           </h1>
         </Link>
         <ul
-          className={`flex sm:gap-10 gap-4 sm:items-center sm:mt-1 sm:pt-0 pt-3 text-slate-800 sm:static absolute left-0 top-[62px] sm:shadow-none shadow-md ${
-            navbarOpen ? "h-fit sm:pb-0 pb-5" : "h-0 overflow-hidden"
-          }  transition-all duration-100 sm:h-fit sm:bg-none  bg-custom-gradient sm:w-fit w-full sm:flex-row flex-col px-4 sm:px-0`}
+          className={`absolute left-4 right-4 top-[74px] flex flex-col gap-3 rounded-2xl bg-[#1e1e1e]/98 px-4 py-4 shadow-[0_16px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl sm:static sm:left-auto sm:right-auto sm:top-auto sm:w-fit sm:flex-row sm:items-center sm:gap-2 sm:rounded-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none ${
+            navbarOpen ? "h-fit opacity-100" : "pointer-events-none h-0 overflow-hidden opacity-0 sm:pointer-events-auto sm:h-fit sm:overflow-visible sm:opacity-100"
+          }`}
         >
-          <li className="hover:text-btnColor font-[500]  transition-all duration-150">
+          <li>
             <Link
-              className={`${
-                path === "/" ? "text-white font-semibold" : "text-gray-200"
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                path === "/" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
               }`}
               to="/"
             >
               Home
             </Link>
           </li>
-          <li className="hover:text-btnColor font-[500]  transition-all duration-150">
+          <li>
             <Link
-              className={`${
-                path === "/about" ? "text-white font-semibold" : "text-gray-200"
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                path === "/about" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
               }`}
               to="/about"
             >
@@ -51,41 +50,41 @@ const Navbar = () => {
             </Link>
           </li>
           {token && (
-            <li className="hover:text-btnColor font-[500]  transition-all duration-150">
-            <Link
-              className={`${
-                path === "/dashboard" ? "text-white font-semibold" : "text-gray-200"
-              }`}
-              to="/dashboard"
-            >
-              Dashboard
-            </Link>
-          </li>
+            <li>
+              <Link
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                  path === "/dashboard" ? "bg-[#1e1e1e] text-white" : "text-[#B4A5A5] hover:bg-white/4 hover:text-white"
+                }`}
+                to="/dashboard"
+              >
+                Dashboard
+              </Link>
+            </li>
           )}
           {!token && (
             <Link to="/register">
-              <li className=" sm:ml-0 -ml-1 bg-rose-700 text-white  cursor-pointer w-24 text-center font-semibold px-2 py-2 rounded-md  hover:text-slate-300   transition-all duration-150">
+              <li className="rounded-full bg-[#301B3F] px-5 py-2 text-center text-sm font-semibold text-white hover:bg-[#3C415C]">
                 SignUp
               </li>
             </Link>
-            )}
+          )}
 
           {token && (
             <button
              onClick={onLogOutHandler}
-             className="sm:ml-0 -ml-1 bg-rose-700 text-white  cursor-pointer w-24 text-center font-semibold px-2 py-2 rounded-md  hover:text-slate-300   transition-all duration-150">
+             className="rounded-full bg-[#301B3F] px-5 py-2 text-sm font-semibold text-white hover:bg-[#3C415C]">
               LogOut
             </button>
-            )}
+          )}
         </ul>
         <button
           onClick={() => setNavbarOpen(!navbarOpen)}
-          className="sm:hidden flex items-center sm:mt-0 mt-2"
+          className="flex items-center rounded-full bg-[#1e1e1e] px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.28)] sm:hidden"
         >
           {navbarOpen ? (
-            <RxCross2 className="text-white text-3xl" />
+            <RxCross2 className="text-3xl text-white" />
           ) : (
-            <IoIosMenu className="text-white text-3xl" />
+            <IoIosMenu className="text-3xl text-white" />
           )}
         </button>
       </div>
