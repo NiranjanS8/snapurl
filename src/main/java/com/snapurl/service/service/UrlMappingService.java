@@ -10,6 +10,7 @@ import com.snapurl.service.repositories.ClickEventRepo;
 import com.snapurl.service.repositories.UrlMappingRepo;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -147,6 +148,19 @@ public class UrlMappingService {
             clickEventRepo.save(clickEvent);
         }
         return urlMapping;
+    }
+
+    @Transactional
+    public void deleteUrl(Long id, Users user) {
+        UrlMapping urlMapping = urlMappingRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Short link not found"));
+
+        if (urlMapping.getUser() == null || user == null || !urlMapping.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("You can only delete your own short links");
+        }
+
+        clickEventRepo.deleteByUrlMapping(urlMapping);
+        urlMappingRepo.delete(urlMapping);
     }
 
     private boolean isExpired(UrlMapping urlMapping) {

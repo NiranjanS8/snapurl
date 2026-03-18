@@ -10,13 +10,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useStoreContext } from '../../contextApi/ContextApi';
 import { Hourglass } from 'react-loader-spinner';
 import Graph from './Graph';
+import toast from 'react-hot-toast';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
-const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
+const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelete }) => {
     const { token } = useStoreContext();
     const navigate = useNavigate();
     const [isCopied, setIsCopied] = useState(false);
     const [analyticToggle, setAnalyticToggle] = useState(false);
     const [loader, setLoader] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedUrl, setSelectedUrl] = useState("");
     const [analyticsData, setAnalyticsData] = useState([]);
 
@@ -61,6 +65,30 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
         }
     }, [selectedUrl]);
 
+    const deleteHandler = async () => {
+        if (deleteLoading) {
+            return;
+        }
+
+        setDeleteLoading(true);
+        try {
+            await api.delete(`/api/urls/${id}`, {
+                headers: {
+                    Authorization: "Bearer " + token,
+                },
+            });
+            toast.success("Short link deleted");
+            setDeleteModalOpen(false);
+            if (onDelete) {
+                await onDelete();
+            }
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Delete failed");
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
   return (
     <div className="overflow-hidden rounded-2xl bg-[#1e1e1e] shadow-[0_16px_36px_rgba(0,0,0,0.2)] transition-all duration-200">
     <div className="flex flex-col gap-4 bg-[#1e1e1e] px-4 py-4 sm:px-5">
@@ -86,6 +114,15 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
               <span className="font-semibold tracking-[-0.01em]">{clickCount}</span>
               <span className="text-xs text-[#B4A5A5]">{clickCount === 1 ? "click" : "clicks"}</span>
             </div>
+            <button
+                type="button"
+                onClick={() => setDeleteModalOpen(true)}
+                disabled={deleteLoading}
+                className="flex items-center justify-center rounded-full bg-[#151515] px-3 py-2 text-sm text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)] transition-transform duration-150 hover:bg-[#301B3F] disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label="Delete short link"
+            >
+                {deleteLoading ? "..." : "\uD83D\uDDD1"}
+            </button>
             <div
                 onClick={() => analyticsHandler(shortUrl)}
                 className="flex cursor-pointer items-center gap-2 rounded-full bg-[#301B3F] px-4 py-2.5 text-sm font-medium tracking-[0.01em] text-white transition-transform duration-150 hover:bg-[#3C415C]"
@@ -122,6 +159,12 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
           </div>
         </div>
       </div>
+      <DeleteConfirmModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={deleteHandler}
+        loading={deleteLoading}
+      />
 
         <div className={`${
             analyticToggle ? "flex" : "hidden"

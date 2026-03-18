@@ -55,6 +55,18 @@ public class UrlMappingController {
         }
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<?> deleteShortUrl(@PathVariable Long id, Principal principal) {
+        Users user = userService.findByEmail(principal.getName());
+        try {
+            urlMappingService.deleteUrl(id, user);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
     @GetMapping("/myurls")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<UrlMappingPageDTO> getUserUrls(

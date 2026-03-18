@@ -471,7 +471,10 @@ const DashboardLayout = () => {
                   </div>
               </div>
               ) : (
-                  <ShortenUrlList data={safeShortenUrls} />
+                  <ShortenUrlList
+                    data={safeShortenUrls}
+                    onDelete={() => Promise.all([refetch(), refetchTotalClicks()])}
+                  />
               )}
               {!isLoading && safeShortenUrls.length > 0 && (
                 <div className="mt-5 flex justify-center rounded-2xl bg-[#1e1e1e] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">

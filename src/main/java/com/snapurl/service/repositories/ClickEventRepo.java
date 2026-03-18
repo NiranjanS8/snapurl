@@ -15,5 +15,6 @@ public interface ClickEventRepo extends JpaRepository<ClickEvent, Long> {
     List<ClickEvent> findByUrlMappingAndClickTimeBetween(UrlMapping mapping, LocalDateTime start, LocalDateTime end);
     // For multiple UrlMappings, we can use the following method:
     List<ClickEvent> findByUrlMappingInAndClickTimeBetween(List<UrlMapping> urlMappings, LocalDateTime start, LocalDateTime end);
+    void deleteByUrlMapping(UrlMapping urlMapping);
 
 }
