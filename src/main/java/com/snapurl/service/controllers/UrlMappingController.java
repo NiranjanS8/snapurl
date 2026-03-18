@@ -2,6 +2,7 @@ package com.snapurl.service.controllers;
 
 import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
+import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
@@ -56,9 +57,39 @@ public class UrlMappingController {
 
     @GetMapping("/myurls")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<List<UrlMappingDTO>> getUserUrls(Principal principal) {
+    public ResponseEntity<UrlMappingPageDTO> getUserUrls(
+            Principal principal,
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String order,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) Integer minClicks,
+            @RequestParam(required = false) Integer maxClicks,
+            @RequestParam(required = false) String status
+    ) {
         Users user = userService.findByEmail(principal.getName());
-        List<UrlMappingDTO> userUrls = urlMappingService.getUrlsByUser(user);
+        LocalDateTime parsedStartDate = startDate != null && !startDate.isBlank()
+                ? LocalDate.parse(startDate).atStartOfDay()
+                : null;
+        LocalDateTime parsedEndDate = endDate != null && !endDate.isBlank()
+                ? LocalDate.parse(endDate).atTime(23, 59, 59)
+                : null;
+        UrlMappingPageDTO userUrls = urlMappingService.searchUserUrls(
+                user,
+                query,
+                sortBy,
+                order,
+                cursor,
+                size,
+                parsedStartDate,
+                parsedEndDate,
+                minClicks,
+                maxClicks,
+                status
+        );
         return ResponseEntity.ok(userUrls);
     }
 

@@ -2,24 +2,20 @@ import { useQuery } from "react-query"
 import api from "../api/api"
 
 
-export const useFetchMyShortUrls = (token, onError) => {
-    return useQuery("my-shortenurls",
+export const useFetchMyShortUrls = ({ token, onError, params }) => {
+    return useQuery(["my-shortenurls", params],
          async () => {
-            return await api.get(
-                "/api/urls/myurls"
-        );
+            const { data } = await api.get("/api/urls/myurls", {
+                params,
+            });
+            return data;
     },
           {
-            select: (data) => {
-                const sortedData = data.data.sort(
-                    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                );
-                return sortedData;
-            },
             enabled: Boolean(token),
             onError,
             retry: false,
-            staleTime: 5000
+            staleTime: 5000,
+            keepPreviousData: true,
           }
         );
 };

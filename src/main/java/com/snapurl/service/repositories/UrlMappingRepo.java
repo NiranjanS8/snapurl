@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface UrlMappingRepo extends JpaRepository<UrlMapping, Long> {
+public interface UrlMappingRepo extends JpaRepository<UrlMapping, Long>, UrlMappingRepoCustom {
     UrlMapping findByShortUrl(String shortUrl);
     List<UrlMapping> findByUser(Users user);
 }

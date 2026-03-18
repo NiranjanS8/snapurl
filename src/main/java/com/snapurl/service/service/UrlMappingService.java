@@ -2,6 +2,7 @@ package com.snapurl.service.service;
 
 import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
+import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.ClickEvent;
 import com.snapurl.service.models.UrlMapping;
 import com.snapurl.service.models.Users;
@@ -38,7 +39,8 @@ public class UrlMappingService {
         urlMapping.setOriginalUrl(originalUrl);
         urlMapping.setShortUrl(shortUrl);
         urlMapping.setUser(user);
-        urlMapping.setCreatedAt(LocalDate.now());
+        urlMapping.setCreatedAt(LocalDateTime.now());
+        urlMapping.setExpiresAt(LocalDateTime.now().plusYears(1));
 
         UrlMapping savedMapping = urlMappingRepo.save(urlMapping);
         return convertToDTO(savedMapping);
@@ -51,7 +53,10 @@ public class UrlMappingService {
         dto.setOriginalUrl(urlMapping.getOriginalUrl());
         dto.setShortUrl(urlMapping.getShortUrl());
         dto.setClickCount(urlMapping.getClickCount());
-        dto.setCreatedAt(urlMapping.getCreatedAt().atStartOfDay());
+        dto.setCreatedAt(urlMapping.getCreatedAt());
+        dto.setLastAccessed(urlMapping.getLastAccessed());
+        dto.setExpiresAt(urlMapping.getExpiresAt());
+        dto.setStatus(isExpired(urlMapping) ? "expired" : "active");
         dto.setUsername(urlMapping.getUser() != null ? urlMapping.getUser().getUsername() : null);
         return dto;
     }
@@ -89,6 +94,23 @@ public class UrlMappingService {
         return urlMappings.stream().map(this::convertToDTO).toList();
     }
 
+    public UrlMappingPageDTO searchUserUrls(
+            Users user,
+            String query,
+            String sortBy,
+            String order,
+            String cursor,
+            int size,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Integer minClicks,
+            Integer maxClicks,
+            String status
+    ) {
+        int safeSize = Math.min(Math.max(size, 1), 25);
+        return urlMappingRepo.searchUserUrls(user, query, sortBy, order, cursor, safeSize, startDate, endDate, minClicks, maxClicks, status);
+    }
+
     public List<ClickEventDTO> getClickEventByDate(String shortUrl, LocalDateTime start, LocalDateTime end) {
         UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
         if(urlMapping != null) {
@@ -116,6 +138,7 @@ public class UrlMappingService {
         UrlMapping  urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
         if(urlMapping != null){
             urlMapping.setClickCount(urlMapping.getClickCount() + 1);
+            urlMapping.setLastAccessed(LocalDateTime.now());
             urlMappingRepo.save(urlMapping);
 
             ClickEvent clickEvent = new ClickEvent();
@@ -124,5 +147,9 @@ public class UrlMappingService {
             clickEventRepo.save(clickEvent);
         }
         return urlMapping;
+    }
+
+    private boolean isExpired(UrlMapping urlMapping) {
+        return urlMapping.getExpiresAt() != null && !urlMapping.getExpiresAt().isAfter(LocalDateTime.now());
     }
 }

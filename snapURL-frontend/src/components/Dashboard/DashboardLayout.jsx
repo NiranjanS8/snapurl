@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Graph from './Graph'
 import { useStoreContext } from '../../contextApi/ContextApi'
 import { useFetchMyShortUrls, useFetchTotalClicks } from '../../hooks/useQuery'
@@ -14,18 +14,72 @@ const DashboardLayout = () => {
     const { token } = useStoreContext();
     const navigate = useNavigate();
     const [shortenPopUp, setShortenPopUp] = useState(false);
+    const [searchInput, setSearchInput] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [minClicks, setMinClicks] = useState("");
+    const [maxClicks, setMaxClicks] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [sortOption, setSortOption] = useState("latest");
+    const [cursor, setCursor] = useState(null);
+    const [cursorHistory, setCursorHistory] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // console.log(useFetchTotalClicks(token, onError));
 
-    const {isLoading, data: myShortenUrls, refetch } = useFetchMyShortUrls(token, onError)
+    useEffect(() => {
+      const timeoutId = window.setTimeout(() => {
+        setDebouncedSearch(searchInput.trim());
+      }, 350);
+
+      return () => window.clearTimeout(timeoutId);
+    }, [searchInput]);
+
+    const sortMap = {
+      latest: { sortBy: "createdAt", order: "desc" },
+      oldest: { sortBy: "createdAt", order: "asc" },
+      clicked: { sortBy: "clicks", order: "desc" },
+      leastClicked: { sortBy: "clicks", order: "asc" },
+      accessed: { sortBy: "lastAccessed", order: "desc" },
+    };
+
+    const activeSort = sortMap[sortOption] || sortMap.latest;
+    const queryParams = {
+      size: 10,
+      sortBy: activeSort.sortBy,
+      order: activeSort.order,
+      ...(debouncedSearch ? { query: debouncedSearch } : {}),
+      ...(cursor ? { cursor } : {}),
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+      ...(minClicks !== "" ? { minClicks } : {}),
+      ...(maxClicks !== "" ? { maxClicks } : {}),
+      ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+    };
+
+    useEffect(() => {
+      setCursor(null);
+      setCursorHistory([]);
+      setCurrentPage(1);
+    }, [debouncedSearch, startDate, endDate, minClicks, maxClicks, statusFilter, sortOption]);
+
+    const {isLoading, data: myShortenUrls, refetch } = useFetchMyShortUrls({
+      token,
+      onError,
+      params: queryParams,
+    })
     
     const {isLoading: loader, data: totalClicks, refetch: refetchTotalClicks} = useFetchTotalClicks(token, onError)
 
-    const safeShortenUrls = myShortenUrls || [];
+    const safeShortenUrls = myShortenUrls?.items || [];
+    const nextCursor = myShortenUrls?.nextCursor || null;
+    const hasNextPage = Boolean(myShortenUrls?.hasNext);
     const safeTotalClicks = totalClicks || [];
     const totalClickCount = safeTotalClicks.reduce((sum, item) => sum + (item.count ?? item.clickCount ?? 0), 0);
     const totalLinks = safeShortenUrls.length;
-    const avgClicksPerLink = totalLinks ? (totalClickCount / totalLinks).toFixed(1) : "0.0";
+    const visibleClickCount = safeShortenUrls.reduce((sum, item) => sum + (item.clickCount ?? 0), 0);
+    const avgClicksPerLink = totalLinks ? (visibleClickCount / totalLinks).toFixed(1) : "0.0";
     const topLinks = [...safeShortenUrls]
       .sort((a, b) => (b.clickCount ?? 0) - (a.clickCount ?? 0))
       .slice(0, 5);
@@ -37,6 +91,43 @@ const DashboardLayout = () => {
     function onError() {
       navigate("/error");
     }
+
+    const handleNextPage = () => {
+      if (!nextCursor) {
+        return;
+      }
+      setCursorHistory((prev) => [...prev, cursor]);
+      setCursor(nextCursor);
+      setCurrentPage((prev) => prev + 1);
+    };
+
+    const handlePreviousPage = () => {
+      if (currentPage === 1) {
+        return;
+      }
+
+      setCursorHistory((prev) => {
+        const nextHistory = [...prev];
+        const previousCursor = nextHistory.pop() ?? null;
+        setCursor(previousCursor);
+        return nextHistory;
+      });
+      setCurrentPage((prev) => Math.max(prev - 1, 1));
+    };
+
+    const resetFilters = () => {
+      setSearchInput("");
+      setDebouncedSearch("");
+      setStartDate("");
+      setEndDate("");
+      setMinClicks("");
+      setMaxClicks("");
+      setStatusFilter("all");
+      setSortOption("latest");
+      setCursor(null);
+      setCursorHistory([]);
+      setCurrentPage(1);
+    };
 
   return (
     <div className="min-h-[calc(100vh-64px)] px-4 py-5 sm:px-8 sm:py-6 lg:px-14 lg:py-8">
@@ -75,13 +166,13 @@ const DashboardLayout = () => {
                   <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
                     <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Links Created</p>
                     <p className="mt-2 text-3xl font-bold tracking-[-0.02em] text-white sm:text-[32px]">{totalLinks}</p>
-                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Short links currently in your dashboard</p>
+                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Links in the current result set</p>
                   </div>
 
                   <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
                     <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Average Engagement</p>
                     <p className="mt-2 text-3xl font-bold tracking-[-0.02em] text-white sm:text-[32px]">{avgClicksPerLink}</p>
-                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Average clicks per active link</p>
+                    <p className="mt-1 text-xs leading-5 text-[#B4A5A5] sm:text-sm">Average clicks for the visible links</p>
                   </div>
 
                   <div className="flex h-full min-h-[124px] flex-col justify-between rounded-2xl bg-[#151515] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4">
@@ -191,6 +282,72 @@ const DashboardLayout = () => {
                     Your shortened links
                   </h2>
                 </div>
+                <p className="text-sm text-[#B4A5A5]">
+                  Page {currentPage} - {safeShortenUrls.length} results
+                </p>
+              </div>
+              <div className="mb-5 grid gap-3 rounded-2xl bg-[#1e1e1e] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)] md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,0.65fr))_auto]">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search short link or original URL"
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  value={minClicks}
+                  onChange={(event) => setMinClicks(event.target.value)}
+                  placeholder="Min clicks"
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  value={maxClicks}
+                  onChange={(event) => setMaxClicks(event.target.value)}
+                  placeholder="Max clicks"
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                >
+                  <option value="all">All status</option>
+                  <option value="active">Active</option>
+                  <option value="expired">Expired</option>
+                </select>
+                <select
+                  value={sortOption}
+                  onChange={(event) => setSortOption(event.target.value)}
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                >
+                  <option value="latest">Latest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="clicked">Most clicked</option>
+                  <option value="leastClicked">Least clicked</option>
+                  <option value="accessed">Recently accessed</option>
+                </select>
+                <button
+                  onClick={resetFilters}
+                  className="rounded-2xl bg-[#151515] px-4 py-3 text-sm font-medium tracking-[0.01em] text-[#B4A5A5] shadow-[0_10px_24px_rgba(0,0,0,0.18)] hover:text-white"
+                >
+                  Reset
+                </button>
               </div>
               {!isLoading && safeShortenUrls.length === 0 ? (
                 <div className="flex justify-center pt-10">
@@ -203,6 +360,26 @@ const DashboardLayout = () => {
               </div>
               ) : (
                   <ShortenUrlList data={safeShortenUrls} />
+              )}
+              {!isLoading && safeShortenUrls.length > 0 && (
+                <div className="mt-5 flex justify-center rounded-2xl bg-[#1e1e1e] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 1}
+                      className="rounded-full bg-[#151515] px-4 py-2 text-sm font-medium tracking-[0.01em] text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={!hasNextPage}
+                      className="rounded-full bg-[#301B3F] px-4 py-2 text-sm font-medium tracking-[0.01em] text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
         </div>
