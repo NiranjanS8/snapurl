@@ -3,7 +3,7 @@ import Graph from './Graph'
 import { useStoreContext } from '../../contextApi/ContextApi'
 import { useFetchMyShortUrls, useFetchTotalClicks } from '../../hooks/useQuery'
 import ShortenPopUp from './ShortenPopUp'
-import { FaChartLine, FaLink } from 'react-icons/fa'
+import { FaChartLine, FaCheck, FaChevronDown, FaLink } from 'react-icons/fa'
 import ShortenUrlList from './ShortenUrlList'
 import { Link, useNavigate } from 'react-router-dom'
 import Loader from '../Loader'
@@ -21,11 +21,15 @@ const DashboardLayout = () => {
     const [minClicks, setMinClicks] = useState("");
     const [maxClicks, setMaxClicks] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [statusMenuOpen, setStatusMenuOpen] = useState(false);
     const [sortOption, setSortOption] = useState("latest");
+    const [sortMenuOpen, setSortMenuOpen] = useState(false);
     const [cursor, setCursor] = useState(null);
     const [cursorHistory, setCursorHistory] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const linkSectionRef = useRef(null);
+    const statusMenuRef = useRef(null);
+    const sortMenuRef = useRef(null);
 
     // console.log(useFetchTotalClicks(token, onError));
 
@@ -43,6 +47,18 @@ const DashboardLayout = () => {
       clicked: { sortBy: "clicks", order: "desc" },
       leastClicked: { sortBy: "clicks", order: "asc" },
       accessed: { sortBy: "lastAccessed", order: "desc" },
+    };
+    const sortLabelMap = {
+      latest: "Latest",
+      oldest: "Oldest",
+      clicked: "Most clicked",
+      leastClicked: "Least clicked",
+      accessed: "Recently accessed",
+    };
+    const statusLabelMap = {
+      all: "All status",
+      active: "Active",
+      expired: "Expired",
     };
 
     const activeSort = sortMap[sortOption] || sortMap.latest;
@@ -64,6 +80,20 @@ const DashboardLayout = () => {
       setCursorHistory([]);
       setCurrentPage(1);
     }, [debouncedSearch, startDate, endDate, minClicks, maxClicks, statusFilter, sortOption]);
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (statusMenuRef.current && !statusMenuRef.current.contains(event.target)) {
+          setStatusMenuOpen(false);
+        }
+        if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
+          setSortMenuOpen(false);
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const {isLoading, data: myShortenUrls, refetch } = useFetchMyShortUrls({
       token,
@@ -296,109 +326,138 @@ const DashboardLayout = () => {
                   Page {currentPage} - {safeShortenUrls.length} results
                 </p>
               </div>
-              <div className="mb-5 rounded-2xl bg-[#1e1e1e] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-                  <div className="min-w-0 xl:w-[320px]">
-                    <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                      Search
-                    </label>
+              <div className="mb-5 rounded-2xl bg-[#1e1e1e] px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.16)]">
+                <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-start">
+                  <div className="min-w-0 xl:w-[300px] xl:flex-none">
                     <input
                       type="text"
                       value={searchInput}
                       onChange={(event) => setSearchInput(event.target.value)}
-                      placeholder="Short link or original URL"
-                      className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                      placeholder="Search link"
+                      className="h-10 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] placeholder:text-[#B4A5A5] focus:ring-2 focus:ring-[#B4A5A5]/45"
                     />
                   </div>
 
-                  <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                    <div>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                        Start Date
-                      </label>
+                  <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:flex-none">
+                    <div className="flex items-center gap-2 lg:w-[340px] lg:flex-none">
                       <input
                         type="date"
                         value={startDate}
                         onChange={(event) => setStartDate(event.target.value)}
-                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                        aria-label="Start date"
+                        className="h-10 w-full rounded-xl bg-[#151515] px-3.5 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] focus:ring-2 focus:ring-[#B4A5A5]/45"
                       />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                        End Date
-                      </label>
+                      <span className="px-1 text-sm text-[#B4A5A5]">to</span>
                       <input
                         type="date"
                         value={endDate}
                         onChange={(event) => setEndDate(event.target.value)}
-                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                        aria-label="End date"
+                        className="h-10 w-full rounded-xl bg-[#151515] px-3.5 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] focus:ring-2 focus:ring-[#B4A5A5]/45"
                       />
                     </div>
-                    <div>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                        Min Clicks
-                      </label>
+
+                    <div className="grid gap-2.5 sm:grid-cols-2 lg:ml-4 lg:w-[230px] lg:grid-cols-2 lg:flex-none">
                       <input
                         type="number"
                         min="0"
                         value={minClicks}
                         onChange={(event) => setMinClicks(event.target.value)}
-                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                        placeholder="Min clicks"
+                        className="h-10 w-full rounded-xl bg-[#151515] px-3.5 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] placeholder:text-[#B4A5A5] focus:ring-2 focus:ring-[#B4A5A5]/45"
                       />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                        Max Clicks
-                      </label>
                       <input
                         type="number"
                         min="0"
                         value={maxClicks}
                         onChange={(event) => setMaxClicks(event.target.value)}
-                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
+                        placeholder="Max clicks"
+                        className="h-10 w-full rounded-xl bg-[#151515] px-3.5 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] placeholder:text-[#B4A5A5] focus:ring-2 focus:ring-[#B4A5A5]/45"
                       />
                     </div>
-                    <div>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                        Status
-                      </label>
-                      <select
-                        value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value)}
-                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                      >
-                        <option value="all">All status</option>
-                        <option value="active">Active</option>
-                        <option value="expired">Expired</option>
-                      </select>
+
+                    <div className="grid gap-2.5 sm:grid-cols-2 lg:ml-3 lg:w-[230px] lg:grid-cols-2 lg:flex-none">
+                      <div ref={statusMenuRef} className="relative min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSortMenuOpen(false);
+                            setStatusMenuOpen((prev) => !prev);
+                          }}
+                          className="flex h-10 w-full items-center justify-between rounded-xl bg-[#151515] px-3.5 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] transition-colors hover:bg-[#1a1a1a] focus:ring-2 focus:ring-[#B4A5A5]/45"
+                        >
+                          <span>{statusFilter === "all" ? "Status" : statusLabelMap[statusFilter]}</span>
+                          <FaChevronDown className={`text-[11px] text-[#B4A5A5] transition-transform ${statusMenuOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {statusMenuOpen && (
+                          <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-xl bg-[#181818] p-1 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ring-1 ring-white/6">
+                            {Object.entries(statusLabelMap).map(([value, label]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => {
+                                  setStatusFilter(value);
+                                  setStatusMenuOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
+                                  statusFilter === value
+                                    ? "bg-[#301B3F]/45 text-white"
+                                    : "text-[#B4A5A5] hover:bg-white/5 hover:text-white"
+                                }`}
+                              >
+                                <span>{label}</span>
+                                {statusFilter === value && <FaCheck className="text-[11px] text-[#C7B8FF]" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div ref={sortMenuRef} className="relative min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStatusMenuOpen(false);
+                            setSortMenuOpen((prev) => !prev);
+                          }}
+                          className="flex h-10 w-full items-center justify-between rounded-xl bg-[#151515] px-3.5 text-sm text-white outline-none shadow-[0_8px_20px_rgba(0,0,0,0.16)] transition-colors hover:bg-[#1a1a1a] focus:ring-2 focus:ring-[#B4A5A5]/45"
+                        >
+                          <span>{sortLabelMap[sortOption]}</span>
+                          <FaChevronDown className={`text-[11px] text-[#B4A5A5] transition-transform ${sortMenuOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {sortMenuOpen && (
+                          <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-full overflow-hidden rounded-xl bg-[#181818] p-1 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ring-1 ring-white/6">
+                            {Object.entries(sortLabelMap).map(([value, label]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => {
+                                  setSortOption(value);
+                                  setSortMenuOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
+                                  sortOption === value
+                                    ? "bg-[#301B3F]/45 text-white"
+                                    : "text-[#B4A5A5] hover:bg-white/5 hover:text-white"
+                                }`}
+                              >
+                                <span>{label}</span>
+                                {sortOption === value && <FaCheck className="text-[11px] text-[#C7B8FF]" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-3 xl:min-w-[220px] xl:justify-end">
-                    <div className="flex-1 xl:max-w-[170px]">
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
-                        Sort
-                      </label>
-                      <select
-                        value={sortOption}
-                        onChange={(event) => setSortOption(event.target.value)}
-                        className="h-11 w-full rounded-xl bg-[#151515] px-4 text-sm text-white outline-none shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus:ring-2 focus:ring-[#B4A5A5]/55"
-                      >
-                        <option value="latest">Latest</option>
-                        <option value="oldest">Oldest</option>
-                        <option value="clicked">Most clicked</option>
-                        <option value="leastClicked">Least clicked</option>
-                        <option value="accessed">Recently accessed</option>
-                      </select>
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        onClick={resetFilters}
-                        className="h-11 rounded-xl px-3 text-sm font-medium tracking-[0.01em] text-[#B4A5A5] transition-colors hover:text-white"
-                      >
-                        Reset
-                      </button>
-                    </div>
+                  <div className="flex items-center xl:ml-1 xl:flex-none">
+                    <button
+                      onClick={resetFilters}
+                      className="h-10 rounded-xl border border-white/8 px-3 text-sm font-medium tracking-[0.01em] text-[#B4A5A5] transition-colors hover:border-white/14 hover:text-white"
+                    >
+                      Reset
+                    </button>
                   </div>
                 </div>
               </div>

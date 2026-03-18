@@ -19,10 +19,10 @@ const Footer = () => {
         </div>
 
         <div className="mt-1 flex justify-center space-x-4 lg:mt-0">
-          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
+          <a href="https://www.linkedin.com/in/niranjans8" target="_blank" rel="noreferrer" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaLinkedin size={24} />
           </a>
-          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
+          <a href="https://github.com/NiranjanS8" target="_blank" rel="noreferrer" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaGithub size={24} />
           </a>
         </div>
