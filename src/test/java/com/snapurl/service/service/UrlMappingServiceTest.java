@@ -116,6 +116,42 @@ class UrlMappingServiceTest {
     }
 
     @Test
+    void createShortUrlReturnsExistingMappingForSameUserAndOriginalUrl() {
+        UrlMapping existingMapping = new UrlMapping();
+        existingMapping.setId(22L);
+        existingMapping.setOriginalUrl("https://example.com");
+        existingMapping.setShortUrl("existing1");
+        existingMapping.setUser(user);
+
+        when(urlMappingRepo.findByUserAndOriginalUrl(user, "https://example.com"))
+                .thenReturn(Optional.of(existingMapping));
+
+        var result = urlMappingService.createShortUrl("https://example.com", null, user);
+
+        assertEquals("existing1", result.getShortUrl());
+        verify(urlMappingRepo, never()).save(any());
+        verify(shortUrlCacheService).put(existingMapping);
+    }
+
+    @Test
+    void createShortUrlDoesNotReuseExistingMappingWhenCustomAliasIsProvided() {
+        UrlMapping savedMapping = new UrlMapping();
+        savedMapping.setId(30L);
+        savedMapping.setOriginalUrl("https://example.com");
+        savedMapping.setShortUrl("custom-one");
+        savedMapping.setUser(user);
+
+        when(urlMappingRepo.existsByShortUrl("custom-one")).thenReturn(false);
+        when(urlMappingRepo.save(any(UrlMapping.class))).thenReturn(savedMapping);
+
+        var result = urlMappingService.createShortUrl("https://example.com", "custom-one", user);
+
+        assertEquals("custom-one", result.getShortUrl());
+        verify(urlMappingRepo, never()).findByUserAndOriginalUrl(user, "https://example.com");
+        verify(shortUrlCacheService).put(savedMapping);
+    }
+
+    @Test
     void createShortUrlWithCustomAliasCachesSavedMapping() {
         UrlMapping savedMapping = new UrlMapping();
         savedMapping.setId(10L);

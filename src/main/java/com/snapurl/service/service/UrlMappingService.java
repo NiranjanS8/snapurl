@@ -52,15 +52,22 @@ public class UrlMappingService {
             throw new IllegalArgumentException(INVALID_URL_MESSAGE);
         }
 
+        String normalizedOriginalUrl = originalUrl.trim();
         String normalizedAlias = normalizeAlias(customAlias);
         if (normalizedAlias != null) {
             validateCustomAlias(normalizedAlias);
-            UrlMapping savedMapping = saveUrlMapping(originalUrl, normalizedAlias, user, true);
+            UrlMapping savedMapping = saveUrlMapping(normalizedOriginalUrl, normalizedAlias, user, true);
             shortUrlCacheService.put(savedMapping);
             return convertToDTO(savedMapping);
         }
 
-        UrlMapping savedMapping = createWithGeneratedShortUrl(originalUrl, user);
+        UrlMapping existingMapping = findExistingUserUrl(user, normalizedOriginalUrl);
+        if (existingMapping != null) {
+            shortUrlCacheService.put(existingMapping);
+            return convertToDTO(existingMapping);
+        }
+
+        UrlMapping savedMapping = createWithGeneratedShortUrl(normalizedOriginalUrl, user);
         shortUrlCacheService.put(savedMapping);
         return convertToDTO(savedMapping);
     }
@@ -132,6 +139,13 @@ public class UrlMappingService {
 
         String normalizedAlias = customAlias.trim();
         return normalizedAlias.isEmpty() ? null : normalizedAlias;
+    }
+
+    private UrlMapping findExistingUserUrl(Users user, String originalUrl) {
+        if (user == null || user.getId() == null) {
+            return null;
+        }
+        return urlMappingRepo.findByUserAndOriginalUrl(user, originalUrl).orElse(null);
     }
 
     private void validateCustomAlias(String customAlias) {
