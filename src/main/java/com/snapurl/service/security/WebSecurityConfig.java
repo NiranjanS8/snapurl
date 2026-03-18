@@ -29,6 +29,7 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private UserDetailsService userDetailsService;
+    private ShortenRateLimitFilter shortenRateLimitFilter;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
@@ -69,6 +70,7 @@ public class WebSecurityConfig {
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(shortenRateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
