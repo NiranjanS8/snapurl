@@ -5,7 +5,7 @@ import { useFetchMyShortUrls, useFetchTotalClicks } from '../../hooks/useQuery'
 import ShortenPopUp from './ShortenPopUp'
 import { FaChartLine, FaLink } from 'react-icons/fa'
 import ShortenUrlList from './ShortenUrlList'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Loader from '../Loader'
 import dayjs from 'dayjs'
 
@@ -26,12 +26,9 @@ const DashboardLayout = () => {
     const totalClickCount = safeTotalClicks.reduce((sum, item) => sum + (item.count ?? item.clickCount ?? 0), 0);
     const totalLinks = safeShortenUrls.length;
     const avgClicksPerLink = totalLinks ? (totalClickCount / totalLinks).toFixed(1) : "0.0";
-    const topLink = safeShortenUrls.reduce((best, current) => {
-      if (!best || current.clickCount > best.clickCount) {
-        return current;
-      }
-      return best;
-    }, null);
+    const topLinks = [...safeShortenUrls]
+      .sort((a, b) => (b.clickCount ?? 0) - (a.clickCount ?? 0))
+      .slice(0, 5);
     const latestActivity = safeTotalClicks[safeTotalClicks.length - 1];
     const latestActivityDate = latestActivity?.clickDate
       ? dayjs(latestActivity.clickDate).format("MMM DD")
@@ -54,12 +51,9 @@ const DashboardLayout = () => {
                     <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">
                       Analytics Command Center
                     </p>
-                    <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-white sm:text-4xl">
+                    <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-white sm:text-4xl lg:whitespace-nowrap">
                       See what your links are doing at a glance.
                     </h1>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-[#B4A5A5]">
-                      A bold live view of link performance, click momentum, and top-performing short URLs across your dashboard.
-                    </p>
                   </div>
 
                   <div className='sm:text-end text-center'>
@@ -132,32 +126,57 @@ const DashboardLayout = () => {
 
                   <div className="xl:col-span-4">
                     <div className="flex h-full flex-col rounded-2xl bg-[#151515] px-5 py-5 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] sm:px-6 sm:py-6">
-                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Top Performer</p>
-                      <h2 className="mt-2.5 text-xl font-semibold tracking-[-0.02em] sm:text-2xl">
-                        {topLink ? topLink.shortUrl : "No top link yet"}
-                      </h2>
-                      <p className="mt-2 break-all text-sm leading-6 text-[#B4A5A5]">
-                        {topLink ? topLink.originalUrl : "Create and share a short URL to start ranking performance."}
-                      </p>
-                      <div className="mt-4 inline-flex w-fit rounded-full bg-white/5 px-4 py-2 text-sm font-medium tracking-[0.01em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
-                        {topLink ? `${topLink.clickCount} clicks` : "Waiting for engagement"}
-                      </div>
-                      <div className="mt-4 grid gap-3">
-                        <div className="rounded-2xl bg-[#1e1e1e] px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-                          <p className="text-sm font-medium tracking-[-0.01em] text-white">Original URL</p>
-                          <p className="mt-2 break-all text-sm leading-6 text-[#B4A5A5]">
-                            {topLink ? topLink.originalUrl : "Your highest performing short URL will appear here once clicks start coming in."}
-                          </p>
-                        </div>
-                        <div className="rounded-2xl bg-[#1e1e1e] px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
-                          <p className="text-sm font-medium tracking-[-0.01em] text-white">Performance Snapshot</p>
-                          <p className="mt-2 text-sm leading-6 text-[#B4A5A5]">
-                            {topLink
-                              ? `This link is currently leading your dashboard with ${topLink.clickCount} recorded clicks.`
-                              : "Create and share a short link to start building your performance snapshot."}
-                          </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#B4A5A5]">Top Performers</p>
+                          <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-white sm:text-2xl">
+                            Link leaderboard
+                          </h2>
                         </div>
                       </div>
+                      {topLinks.length === 0 ? (
+                        <div className="mt-4 rounded-2xl bg-[#1e1e1e] px-4 py-4 text-sm leading-6 text-[#B4A5A5] shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                          Create and share a short URL to start ranking performance.
+                        </div>
+                      ) : (
+                        <div className="mt-4 overflow-hidden rounded-2xl bg-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                          <div className="grid grid-cols-[44px_minmax(0,1fr)_72px_78px] items-center gap-3 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.12em] text-[#B4A5A5]">
+                            <span>Rank</span>
+                            <span>Short Link</span>
+                            <span className="text-right">Clicks</span>
+                            <span className="text-right">Share</span>
+                          </div>
+                          {topLinks.map((link, index) => {
+                            const clicks = link.clickCount ?? 0;
+                            const share = totalClickCount > 0 ? ((clicks / totalClickCount) * 100).toFixed(1) : "0.0";
+
+                            return (
+                              <div
+                                key={link.id ?? link.shortUrl}
+                                className="grid grid-cols-[44px_minmax(0,1fr)_72px_78px] items-center gap-3 border-t border-white/6 px-4 py-3 text-sm text-[#B4A5A5]"
+                              >
+                                <span className={`font-medium ${index === 0 ? "text-white" : "text-[#B4A5A5]"}`}>
+                                  {index + 1}
+                                </span>
+                                <Link
+                                  to={`${import.meta.env.VITE_REACT_FRONT_END_URL}/s/${link.shortUrl}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={`truncate font-medium tracking-[-0.01em] hover:text-white ${index === 0 ? "text-[#C7B8FF]" : "text-white/92"}`}
+                                >
+                                  {link.shortUrl}
+                                </Link>
+                                <span className={`text-right font-medium ${index === 0 ? "text-white" : "text-white/88"}`}>
+                                  {clicks}
+                                </span>
+                                <span className="text-right text-[#B4A5A5]">
+                                  {share}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -125,9 +125,9 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
 
         <div className={`${
             analyticToggle ? "flex" : "hidden"
-          } relative min-h-[300px] w-full overflow-hidden rounded-2xl bg-[#151515] p-3.5 shadow-[0_12px_28px_rgba(0,0,0,0.18)] sm:p-4`}>
+          } relative min-h-[190px] w-full overflow-hidden rounded-2xl bg-[#151515] p-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18)] sm:p-3`}>
             {loader ? (
-                <div className="flex min-h-[220px] w-full items-center justify-center">
+                <div className="flex min-h-[150px] w-full items-center justify-center">
                     <div className="flex flex-col items-center gap-1">
                     <Hourglass
                         visible={true}
@@ -153,7 +153,9 @@ const ShortenItem = ({ originalUrl, shortUrl, clickCount, createdAt }) => {
                             </h3>
                         </div>
                     )}
-                        <Graph graphData={analyticsData} />
+                        <div className="mx-auto h-[150px] w-full max-w-[640px] sm:h-[165px]">
+                          <Graph graphData={analyticsData} compact />
+                        </div>
                     </>
                     )}
         </div>

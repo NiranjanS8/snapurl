@@ -1,5 +1,5 @@
 import React from "react";
-import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
+import { FaGithub, FaLinkedin } from "react-icons/fa";
 
 const Footer = () => {
   return (
@@ -15,21 +15,15 @@ const Footer = () => {
 
         <div className="rounded-2xl bg-[#1e1e1e] px-6 py-5 text-center text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#B4A5A5]">Built for speed</p>
-          <p className="mt-3 text-sm text-[#B4A5A5]">&copy; 2024 SnapURL. All rights reserved.</p>
+          <p className="mt-3 text-sm text-[#B4A5A5]">&copy; 2026 SnapURL. All rights reserved.</p>
         </div>
 
         <div className="mt-1 flex justify-center space-x-4 lg:mt-0">
           <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
-            <FaFacebook size={24} />
-          </a>
-          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
-            <FaTwitter size={24} />
-          </a>
-          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
-            <FaInstagram size={24} />
-          </a>
-          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
             <FaLinkedin size={24} />
+          </a>
+          <a href="#" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1e1e1e] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:text-white">
+            <FaGithub size={24} />
           </a>
         </div>
       </div>

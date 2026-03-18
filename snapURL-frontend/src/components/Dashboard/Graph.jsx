@@ -1,25 +1,27 @@
 import React from "react";
-import { Bar } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
-  BarElement,
   CategoryScale,
   LinearScale,
   Legend,
   Tooltip,
   Filler,
+  LineElement,
+  PointElement,
 } from "chart.js";
 
 ChartJS.register(
-  BarElement,
   Tooltip,
   CategoryScale,
   LinearScale,
   Legend,
-  Filler
+  Filler,
+  LineElement,
+  PointElement
 );
 
-const Graph = ({ graphData }) => {
+const Graph = ({ graphData, compact = false }) => {
   const labels = graphData?.map((item) => `${item.clickDate}`);
   const clicksPerDay = graphData?.map((item) => item.count ?? item.clickCount);
 
@@ -35,13 +37,16 @@ const Graph = ({ graphData }) => {
           graphData.length > 0
             ? clicksPerDay
             : [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1],
-        backgroundColor: graphData.length > 0 ? "rgba(60, 65, 92, 0.78)" : "rgba(180, 165, 165, 0.1)",
-        borderRadius: 12,
-        borderSkipped: false,
-        hoverBackgroundColor: "rgba(48, 27, 63, 0.82)",
-        barThickness: 22,
-        categoryPercentage: 0.72,
-        barPercentage: 0.9,
+        borderColor: graphData.length > 0 ? "rgba(122, 90, 248, 0.95)" : "rgba(180, 165, 165, 0.28)",
+        backgroundColor: graphData.length > 0 ? "rgba(122, 90, 248, 0.12)" : "rgba(180, 165, 165, 0.06)",
+        fill: true,
+        tension: 0.38,
+        borderWidth: compact ? 2.25 : 3,
+        pointRadius: graphData.length > 0 ? (compact ? 2 : 3) : 0,
+        pointHoverRadius: compact ? 4 : 5,
+        pointBackgroundColor: graphData.length > 0 ? "#7A5AF8" : "rgba(180, 165, 165, 0.3)",
+        pointBorderWidth: 0,
+        pointHitRadius: compact ? 12 : 16,
       },
     ],
   };
@@ -58,8 +63,8 @@ const Graph = ({ graphData }) => {
         titleColor: "#ffffff",
         bodyColor: "#B4A5A5",
         displayColors: false,
-        padding: 12,
-        cornerRadius: 12,
+        padding: compact ? 10 : 12,
+        cornerRadius: compact ? 10 : 12,
       },
     },
     scales: {
@@ -69,15 +74,16 @@ const Graph = ({ graphData }) => {
           display: false,
         },
         grid: {
-          color: "rgba(180, 165, 165, 0.08)",
+          color: "rgba(180, 165, 165, 0.06)",
           drawTicks: false,
         },
         ticks: {
           color: "#B4A5A5",
           font: {
-            size: 12,
+            size: compact ? 10 : 12,
             weight: "600",
           },
+          padding: compact ? 6 : 8,
           callback: function (value) {
             if (Number.isInteger(value)) {
               return value.toString();
@@ -86,7 +92,7 @@ const Graph = ({ graphData }) => {
           },
         },
         title: {
-          display: true,
+          display: !compact,
           text: "Clicks",
           font: {
             size: 13,
@@ -100,20 +106,21 @@ const Graph = ({ graphData }) => {
           display: false,
         },
         grid: {
-          display: false,
+          color: "rgba(180, 165, 165, 0.04)",
           drawTicks: false,
         },
         ticks: {
           color: "#B4A5A5",
           font: {
-            size: 11,
+            size: compact ? 10 : 11,
             weight: "600",
           },
+          padding: compact ? 6 : 8,
           maxRotation: 0,
           minRotation: 0,
         },
         title: {
-          display: true,
+          display: !compact,
           text: "Date",
           font: {
             size: 13,
@@ -125,7 +132,7 @@ const Graph = ({ graphData }) => {
     },
   };
 
-  return <Bar className="w-full" data={data} options={options} />;
+  return <Line className={compact ? "h-full w-full" : "w-full"} data={data} options={options} />;
 };
 
 export default Graph;
