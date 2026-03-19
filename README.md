@@ -1,23 +1,10 @@
 # SnapURL
 
-SnapURL is a full-stack URL shortening platform built to feel closer to a production-minded SaaS system than a basic CRUD project. It combines a Spring Boot backend, a React dashboard, Redis-backed performance features, and RabbitMQ-driven asynchronous analytics to handle both product polish and backend scalability concerns.
+SnapURL is a full-stack URL shortening platform. It combines a Spring Boot backend, a React dashboard, Redis-backed performance features, and RabbitMQ-driven asynchronous analytics to handle both product polish and backend scalability concerns.
 
 ## What It Does
 
 SnapURL lets users create short links, manage them from a dashboard, and track how those links perform over time. The project includes custom aliases, analytics, secure authentication flows, server-side querying, and operational concerns such as caching, throttling, and asynchronous event processing.
-
-## Why This Project Stands Out
-
-This is not just a short-link generator. The backend is designed around concerns that show up in real systems:
-
-- Redis caching for hot redirect lookups
-- RabbitMQ for asynchronous click-event processing
-- Redis-backed login and API throttling
-- account lockout for brute-force resistance
-- refresh-token based authentication
-- password reset via one-time codes
-- centralized exception handling and test coverage
-- server-side search, filtering, sorting, and pagination
 
 ## Core Capabilities
 
@@ -53,17 +40,7 @@ This is not just a short-link generator. The backend is designed around concerns
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U["User"] --> F["React Frontend"]
-    F --> A["Spring Boot API"]
-    A --> DB["MySQL"]
-    A --> R["Redis"]
-    A --> MQ["RabbitMQ"]
-    MQ --> C["Click Analytics Consumer"]
-    C --> DB
-    C --> R
-```
+![Architecture](Snap_Url_Architecture.png)
 
 ### Redirect Flow
 
