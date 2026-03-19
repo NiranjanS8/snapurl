@@ -1,6 +1,7 @@
 package com.snapurl.service.controllers;
 
 import com.snapurl.service.dtos.ApiErrorResponse;
+import com.snapurl.service.service.AccountLockedException;
 import com.snapurl.service.service.RateLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,6 +29,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountLocked(AccountLockedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.LOCKED, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataConflict(DataIntegrityViolationException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, "That email or username is already in use.", request.getRequestURI());
@@ -45,7 +51,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiErrorResponse> handleUnauthorized(AuthenticationException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password.", request.getRequestURI());
     }
 
     @ExceptionHandler(RateLimitExceededException.class)

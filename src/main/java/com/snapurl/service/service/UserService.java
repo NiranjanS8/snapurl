@@ -14,6 +14,7 @@ import com.snapurl.service.security.JwtAuthenticationResponse;
 import com.snapurl.service.security.JwtUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -78,6 +79,10 @@ public class UserService {
     private long passwordResetExpirationMinutes;
     @Value("${snapurl.auth.expose-reset-token:true}")
     private boolean exposeResetToken;
+    @Value("${snapurl.auth.max-failed-login-attempts:5}")
+    private int maxFailedLoginAttempts;
+    @Value("${snapurl.auth.account-lock-minutes:15}")
+    private long accountLockMinutes;
 
 
     // This method handles user registration by encoding the password and saving the user to the database
@@ -103,17 +108,30 @@ public class UserService {
     // This method handles user login and returns a JWT token if authentication is successful
     @Transactional
     public JwtAuthenticationResponse loginUser(LoginRequest loginRequest) {
-        validateEmail(loginRequest.getEmail());
+        String normalizedEmail = validateEmail(loginRequest.getEmail());
+        Users existingUser = userRepo.findByEmail(normalizedEmail).orElse(null);
+        if (existingUser != null && isAccountLocked(existingUser)) {
+            throw new AccountLockedException("Too many failed login attempts. Your account is temporarily locked. Please try again later.");
+        }
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail().trim().toLowerCase(), loginRequest.getPassword())
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, loginRequest.getPassword())
+            );
+        } catch (AuthenticationException ex) {
+            if (existingUser != null) {
+                registerFailedLogin(existingUser);
+            }
+            throw ex;
+        }
         // If authentication is successful, set the authentication in the security context
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         String accessToken = jwtUtils.generateToken(userDetails);
         Users user = findByEmail(userDetails.getEmail());
+        resetLoginFailures(user);
         String refreshToken = createRefreshToken(user).getToken();
 
         return new JwtAuthenticationResponse(accessToken, refreshToken, "Bearer");
@@ -206,6 +224,7 @@ public class UserService {
 
         Users user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(resetPasswordRequest.getPassword()));
+        resetLoginFailures(user);
         userRepo.save(user);
 
         resetToken.setUsed(true);
@@ -228,7 +247,7 @@ public class UserService {
         return refreshTokenRepo.save(refreshToken);
     }
 
-    private void validateEmail(String email) {
+    private String validateEmail(String email) {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email is required.");
         }
@@ -237,6 +256,7 @@ public class UserService {
         if (!isAllowedEmail(normalizedEmail)) {
             throw new IllegalArgumentException("Please use a supported email provider like Gmail, Proton Mail, iCloud Mail, or Outlook.");
         }
+        return normalizedEmail;
     }
 
     private boolean isAllowedEmail(String email) {
@@ -270,6 +290,29 @@ public class UserService {
     private void validateUsername(String username) {
         if (username == null || username.trim().length() < 3) {
             throw new IllegalArgumentException("Username must be at least 3 characters long.");
+        }
+    }
+
+    private boolean isAccountLocked(Users user) {
+        return user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now());
+    }
+
+    private void registerFailedLogin(Users user) {
+        int nextAttemptCount = user.getFailedLoginAttempts() + 1;
+        if (nextAttemptCount >= maxFailedLoginAttempts) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(LocalDateTime.now().plusMinutes(accountLockMinutes));
+        } else {
+            user.setFailedLoginAttempts(nextAttemptCount);
+        }
+        userRepo.save(user);
+    }
+
+    private void resetLoginFailures(Users user) {
+        if (user.getFailedLoginAttempts() != 0 || user.getLockedUntil() != null) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(null);
+            userRepo.save(user);
         }
     }
 }

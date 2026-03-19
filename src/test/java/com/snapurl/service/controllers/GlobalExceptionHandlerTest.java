@@ -2,6 +2,7 @@ package com.snapurl.service.controllers;
 
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
+import com.snapurl.service.service.AccountLockedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,8 +65,20 @@ class GlobalExceptionHandlerTest {
         );
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("Bad credentials", response.getBody().getMessage());
+        assertEquals("Invalid email or password.", response.getBody().getMessage());
         assertEquals("Unauthorized", response.getBody().getError());
+    }
+
+    @Test
+    void handleAccountLockedReturns423() {
+        var response = handler.handleAccountLocked(
+                new AccountLockedException("Account locked"),
+                request
+        );
+
+        assertEquals(HttpStatus.LOCKED, response.getStatusCode());
+        assertEquals("Account locked", response.getBody().getMessage());
+        assertEquals("Locked", response.getBody().getError());
     }
 
     @Test

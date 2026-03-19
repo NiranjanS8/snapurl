@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -70,6 +71,8 @@ class UserServiceTest {
         ReflectionTestUtils.setField(userService, "refreshTokenExpirationMs", 604800000L);
         ReflectionTestUtils.setField(userService, "passwordResetExpirationMinutes", 30L);
         ReflectionTestUtils.setField(userService, "exposeResetToken", true);
+        ReflectionTestUtils.setField(userService, "maxFailedLoginAttempts", 3);
+        ReflectionTestUtils.setField(userService, "accountLockMinutes", 15L);
     }
 
     @Test
@@ -144,6 +147,40 @@ class UserServiceTest {
         assertEquals("access-token", response.getAccessToken());
         assertNotNull(response.getRefreshToken());
         assertEquals("Bearer", response.getTokenType());
+    }
+
+    @Test
+    void loginUserLocksAccountAfterConfiguredFailedAttempts() {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("user@gmail.com");
+        loginRequest.setPassword("wrong-password");
+        user.setFailedLoginAttempts(2);
+
+        when(userRepo.findByEmail("user@gmail.com")).thenReturn(Optional.of(user));
+        when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("Bad credentials"));
+
+        assertThrows(BadCredentialsException.class, () -> userService.loginUser(loginRequest));
+
+        assertEquals(0, user.getFailedLoginAttempts());
+        assertNotNull(user.getLockedUntil());
+        verify(userRepo).save(user);
+    }
+
+    @Test
+    void loginUserRejectsAlreadyLockedAccount() {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("user@gmail.com");
+        loginRequest.setPassword("password123");
+        user.setLockedUntil(LocalDateTime.now().plusMinutes(5));
+
+        when(userRepo.findByEmail("user@gmail.com")).thenReturn(Optional.of(user));
+
+        AccountLockedException exception = assertThrows(
+                AccountLockedException.class,
+                () -> userService.loginUser(loginRequest)
+        );
+
+        assertEquals("Too many failed login attempts. Your account is temporarily locked. Please try again later.", exception.getMessage());
     }
 
     @Test

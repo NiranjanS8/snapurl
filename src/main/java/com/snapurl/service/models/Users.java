@@ -11,6 +11,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(
         uniqueConstraints = {
@@ -33,4 +35,7 @@ public class Users {
     @Column(nullable = false)
     private String password;
     private String role = "ROLE_USER";
+    @Column(nullable = false)
+    private int failedLoginAttempts = 0;
+    private LocalDateTime lockedUntil;
 }
