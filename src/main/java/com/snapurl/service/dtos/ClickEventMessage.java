@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ClickEventMessage {
     private Long urlMappingId;
+    private Long userId;
     private String shortUrl;
     private LocalDateTime clickedAt;
 }

@@ -5,6 +5,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import toast from 'react-hot-toast';
 
+const ALLOWED_EMAIL_DOMAINS = new Set([
+    "gmail.com",
+    "googlemail.com",
+    "proton.me",
+    "protonmail.com",
+    "icloud.com",
+    "me.com",
+    "mac.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+]);
+
 const RegisterPage = () => {
     const navigate = useNavigate();
     const [loader, setLoader] = useState(false);
@@ -23,19 +36,36 @@ const RegisterPage = () => {
         mode: "onTouched",
     });
 
+    const isSupportedEmail = (email) => {
+        const normalizedEmail = email?.trim().toLowerCase();
+        if (!normalizedEmail || !normalizedEmail.includes("@")) {
+            return false;
+        }
+        const domain = normalizedEmail.split("@")[1];
+        return ALLOWED_EMAIL_DOMAINS.has(domain);
+    };
+
     const registerHandler = async (data) => {
+        if (!isSupportedEmail(data.email)) {
+            toast.error("Use a supported provider like Gmail, Proton Mail, iCloud Mail, or Outlook.");
+            return;
+        }
+
         setLoader(true);
         try {
             const { data: response } = await api.post(
                 "/api/auth/public/register",
-                data
+                {
+                    ...data,
+                    email: data.email.trim().toLowerCase(),
+                    username: data.username.trim(),
+                }
             );
             reset();
             navigate("/login");
             toast.success("Registeration Successful!")
         } catch (error) {
-            console.log(error);
-            toast.error("Registeration Failed!")
+            toast.error(error?.response?.data?.message || "Registeration Failed!")
         } finally {
             setLoader(false);
         }
@@ -88,7 +118,7 @@ const RegisterPage = () => {
                     message="*Password is required"
                     placeholder="Type your password"
                     register={register}
-                    min={6}
+                    min={8}
                     errors={errors}
                 />
             </div>

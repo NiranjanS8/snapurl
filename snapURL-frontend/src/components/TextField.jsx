@@ -13,6 +13,8 @@ const TextField = ({
   }) => {
     const strictUrlPattern =
       /^(https?:\/\/)?(?=.{4,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}(?::\d{2,5})?(?:\/[^\s]*)?$/;
+    const emailPattern =
+      /^[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+\.)+[A-Za-z]{2,24}$/;
 
     return (
       <div className="flex flex-col gap-1">
@@ -35,13 +37,13 @@ const TextField = ({
           {...register(id, {
             required: { value: required, message },
             minLength: min
-              ? { value: min, message: "Minimum 6 character is required" }
+              ? { value: min, message: `Minimum ${min} character is required` }
               : null,
   
             pattern:
               type === "email"
                 ? {
-                    value: /^[a-zA-Z0-9]+@(?:[a-zA-Z0-9]+\.)+com+$/,
+                    value: emailPattern,
                     message: "Invalid email",
                   }
                 : type === "url"

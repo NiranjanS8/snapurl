@@ -6,10 +6,23 @@ import api from '../api/api';
 import toast from 'react-hot-toast';
 import { useStoreContext } from '../contextApi/ContextApi';
 
+const ALLOWED_EMAIL_DOMAINS = new Set([
+    "gmail.com",
+    "googlemail.com",
+    "proton.me",
+    "protonmail.com",
+    "icloud.com",
+    "me.com",
+    "mac.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+]);
+
 const LoginPage = () => {
     const navigate = useNavigate();
     const [loader, setLoader] = useState(false);
-    const { setToken } = useStoreContext();
+    const { setToken, setRefreshToken } = useStoreContext();
 
     const {
         register,
@@ -24,25 +37,39 @@ const LoginPage = () => {
         mode: "onTouched",
     });
 
+    const isSupportedEmail = (email) => {
+        const normalizedEmail = email?.trim().toLowerCase();
+        if (!normalizedEmail || !normalizedEmail.includes("@")) {
+            return false;
+        }
+        const domain = normalizedEmail.split("@")[1];
+        return ALLOWED_EMAIL_DOMAINS.has(domain);
+    };
+
     const loginHandler = async (data) => {
+        if (!isSupportedEmail(data.email)) {
+            toast.error("Use a supported provider like Gmail, Proton Mail, iCloud Mail, or Outlook.");
+            return;
+        }
+
         setLoader(true);
         try {
             const { data: response } = await api.post(
                 "/api/auth/public/login",
                 {
-                    email: data.email,
+                    email: data.email.trim().toLowerCase(),
                     password: data.password,
                 }
             );
-            console.log(response.token);
-            setToken(response.token);
-            localStorage.setItem("JWT_TOKEN", JSON.stringify(response.token));
+            setToken(response.accessToken);
+            setRefreshToken(response.refreshToken);
+            localStorage.setItem("JWT_TOKEN", JSON.stringify(response.accessToken));
+            localStorage.setItem("JWT_REFRESH_TOKEN", JSON.stringify(response.refreshToken));
             toast.success("Login Successful!");
             reset();
             navigate("/dashboard");
         } catch (error) {
-            console.log(error);
-            toast.error("Login Failed!")
+            toast.error(error?.response?.data?.message || "Login Failed!")
         } finally {
             setLoader(false);
         }
@@ -93,9 +120,18 @@ const LoginPage = () => {
                     message="*Password is required"
                     placeholder="Type your password"
                     register={register}
-                    min={6}
+                    min={8}
                     errors={errors}
                 />
+            </div>
+
+            <div className="mt-3 text-right">
+                <Link
+                    className="text-sm text-[#B4A5A5] transition-colors hover:text-white"
+                    to="/forgot-password"
+                >
+                    Forgot password?
+                </Link>
             </div>
 
             <button

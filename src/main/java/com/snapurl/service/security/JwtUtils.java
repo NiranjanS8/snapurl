@@ -34,17 +34,18 @@ public class JwtUtils {
 
     // Generate a JWT token for the authenticated user
     public  String generateToken(UserDetailsImpl userDetails){
-
-        String email = userDetails.getEmail();
         String role = userDetails.getAuthorities().stream()
                 .map(auth -> auth.getAuthority())
                 .collect(Collectors.joining(","));
+        return generateToken(userDetails.getEmail(), role);
+    }
 
+    public String generateToken(String email, String role) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date((new Date().getTime() + jwtExpirationMs))) // Token valid for 24 hours
+                .expiration(new Date((new Date().getTime() + jwtExpirationMs)))
                 .signWith(key())
                 .compact();
     }

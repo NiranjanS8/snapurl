@@ -21,6 +21,7 @@ public class DirectClickAnalyticsDispatcher implements ClickAnalyticsDispatcher 
     public void dispatchClick(UrlMapping urlMapping) {
         clickAnalyticsProcessor.processClick(new ClickEventMessage(
                 urlMapping.getId(),
+                urlMapping.getUser() != null ? urlMapping.getUser().getId() : null,
                 urlMapping.getShortUrl(),
                 LocalDateTime.now()
         ));

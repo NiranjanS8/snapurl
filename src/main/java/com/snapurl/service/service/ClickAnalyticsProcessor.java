@@ -19,25 +19,22 @@ public class ClickAnalyticsProcessor {
 
     @Transactional
     public void processClick(ClickEventMessage message) {
-        UrlMapping urlMapping = urlMappingRepo.findById(message.getUrlMappingId())
-                .orElse(null);
-
-        if (urlMapping == null) {
+        int updatedRows = urlMappingRepo.incrementClickCountAndUpdateLastAccessed(
+                message.getUrlMappingId(),
+                message.getClickedAt()
+        );
+        if (updatedRows == 0) {
             return;
         }
 
-        urlMapping.setClickCount(urlMapping.getClickCount() + 1);
-        urlMapping.setLastAccessed(message.getClickedAt());
-        urlMappingRepo.save(urlMapping);
-
         ClickEvent clickEvent = new ClickEvent();
-        clickEvent.setUrlMapping(urlMapping);
+        clickEvent.setUrlMapping(urlMappingRepo.getReferenceById(message.getUrlMappingId()));
         clickEvent.setClickTime(message.getClickedAt());
         clickEventRepo.save(clickEvent);
 
-        analyticsCacheService.evictForShortUrl(urlMapping.getShortUrl());
-        if (urlMapping.getUser() != null && urlMapping.getUser().getId() != null) {
-            analyticsCacheService.evictForUser(urlMapping.getUser().getId());
+        analyticsCacheService.evictForShortUrl(message.getShortUrl());
+        if (message.getUserId() != null) {
+            analyticsCacheService.evictForUser(message.getUserId());
         }
     }
 }

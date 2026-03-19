@@ -38,6 +38,7 @@ public class RabbitClickAnalyticsDispatcher implements ClickAnalyticsDispatcher 
     public void dispatchClick(UrlMapping urlMapping) {
         ClickEventMessage message = new ClickEventMessage(
                 urlMapping.getId(),
+                urlMapping.getUser() != null ? urlMapping.getUser().getId() : null,
                 urlMapping.getShortUrl(),
                 LocalDateTime.now()
         );
