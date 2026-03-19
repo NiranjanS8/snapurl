@@ -1,10 +1,14 @@
-# SnapURL
+# Snap URL - Snap Share Go
 
 SnapURL is a full-stack URL shortening platform. It combines a Spring Boot backend, a React dashboard, Redis-backed performance features, and RabbitMQ-driven asynchronous analytics to handle both product polish and backend scalability concerns.
 
 ## What It Does
 
 SnapURL lets users create short links, manage them from a dashboard, and track how those links perform over time. The project includes custom aliases, analytics, secure authentication flows, server-side querying, and operational concerns such as caching, throttling, and asynchronous event processing.
+
+## Architecture
+
+![Architecture](Snap_Url_Architecture.png)
 
 ## Core Capabilities
 
@@ -37,10 +41,6 @@ SnapURL lets users create short links, manage them from a dashboard, and track h
 - Redis-backed login throttling
 - temporary account lockout after repeated failed logins
 - rate limiting for public and authenticated shorten endpoints
-
-## Architecture
-
-![Architecture](Snap_Url_Architecture.png)
 
 ### Redirect Flow
 
@@ -77,8 +77,6 @@ Redis is used for multiple production-style concerns:
 - analytics caching
 - login/API rate limiting
 
-This makes the project stronger both technically and from a resume perspective because Redis is applied to real bottlenecks, not added as a token dependency.
-
 ### RabbitMQ
 
 RabbitMQ is used to decouple analytics writes from the redirect path. Instead of blocking the redirect response on click persistence, SnapURL publishes an event and processes analytics asynchronously in the background.
@@ -110,8 +108,6 @@ The frontend is a dark, minimal SaaS-style interface built around:
 - real-time search and filtering controls
 - custom confirmation and recovery flows
 - responsive layout and refined dark-mode typography
-
-The UI is intentionally paired with backend features rather than acting as a thin mock layer. Most dashboard interactions are driven by real API querying, not local-only state tricks.
 
 ## Technical Highlights
 
