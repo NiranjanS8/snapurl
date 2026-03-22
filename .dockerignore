@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+.vscode
+target
+snapURL-frontend/node_modules
+snapURL-frontend/dist
+node_modules
+*.log
+README.md
+ARCHITECTURE.md
+Snap_Url_Architecture.png
