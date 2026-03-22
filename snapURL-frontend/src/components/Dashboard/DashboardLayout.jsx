@@ -8,6 +8,7 @@ import ShortenUrlList from './ShortenUrlList'
 import { Link, useNavigate } from 'react-router-dom'
 import Loader from '../Loader'
 import dayjs from 'dayjs'
+import { buildShortLink } from '../../utils/publicUrl'
 
 const DashboardLayout = () => {
     // const refetch = false;
@@ -290,7 +291,7 @@ const DashboardLayout = () => {
                                   {index + 1}
                                 </span>
                                 <Link
-                                  to={`${import.meta.env.VITE_REACT_FRONT_END_URL}/s/${link.shortUrl}`}
+                                  to={buildShortLink(link.shortUrl)}
                                   target="_blank"
                                   rel="noreferrer"
                                   className={`truncate font-medium tracking-[-0.01em] hover:text-white ${index === 0 ? "text-[#C7B8FF]" : "text-white/92"}`}

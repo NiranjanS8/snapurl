@@ -12,6 +12,7 @@ import { Hourglass } from 'react-loader-spinner';
 import Graph from './Graph';
 import toast from 'react-hot-toast';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import { buildShortLink, getFrontendOrigin } from '../../utils/publicUrl';
 
 const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelete }) => {
     const { token } = useStoreContext();
@@ -24,7 +25,7 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
     const [selectedUrl, setSelectedUrl] = useState("");
     const [analyticsData, setAnalyticsData] = useState([]);
 
-    const subDomain = import.meta.env.VITE_REACT_FRONT_END_URL.replace(
+    const subDomain = getFrontendOrigin().replace(
         /^https?:\/\//,
         ""
       );
@@ -101,7 +102,7 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
             <Link
               target='_'
               className='min-w-0 break-all text-base font-semibold tracking-[-0.02em] text-white sm:text-lg'
-              to={import.meta.env.VITE_REACT_FRONT_END_URL + "/s/" + `${shortUrl}`}>
+              to={buildShortLink(shortUrl)}>
                   {shortLink}
             </Link>
             <FaExternalLinkAlt className="shrink-0 text-sm text-[#B4A5A5]" />
@@ -142,7 +143,7 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
         <div className="flex flex-wrap items-center gap-2.5 lg:justify-end">
           <CopyToClipboard
               onCopy={() => setIsCopied(true)}
-              text={`${import.meta.env.VITE_REACT_FRONT_END_URL + "/s/" + `${shortUrl}`}`}
+              text={buildShortLink(shortUrl)}
           >
               <div className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#151515] px-3.5 py-2.5 text-sm font-medium tracking-[0.01em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition-transform duration-150 hover:bg-[#301B3F]">
                 <button>{isCopied ? "Copied" : "Copy"}</button>

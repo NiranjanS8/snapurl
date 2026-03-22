@@ -8,6 +8,7 @@ import { LiaCheckSolid } from "react-icons/lia";
 import Card from "./Card";
 import { useStoreContext } from "../contextApi/ContextApi";
 import api from "../api/api";
+import { buildShortLink } from "../utils/publicUrl";
 
 const GUEST_LIMIT = 3;
 const GUEST_STORAGE_KEY = "SNAPURL_GUEST_SHORTENS";
@@ -64,7 +65,7 @@ const LandingPage = () => {
         customAlias: useCustomAlias ? customAlias.trim() || undefined : undefined,
       };
       const { data } = await api.post(endpoint, payload);
-      const generatedUrl = `${import.meta.env.VITE_REACT_FRONT_END_URL}/s/${data.shortUrl}`;
+      const generatedUrl = buildShortLink(data.shortUrl);
 
       setShortUrl(generatedUrl);
       setOriginalUrl("");

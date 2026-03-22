@@ -6,6 +6,7 @@ import { Tooltip } from '@mui/material';
 import { RxCross2 } from 'react-icons/rx';
 import api from '../../api/api';
 import toast from 'react-hot-toast';
+import { buildShortLink } from '../../utils/publicUrl';
 
 const RESERVED_ALIASES = new Set(["api", "admin", "login", "register", "signup", "auth", "public", "dashboard", "error", "s"]);
 
@@ -42,7 +43,7 @@ const CreateNewShorten = ({ setOpen, refetch }) => {
             },
           });
 
-          const shortenUrl = `${import.meta.env.VITE_REACT_FRONT_END_URL + "/s/" + `${res.shortUrl}`}`;
+          const shortenUrl = buildShortLink(res.shortUrl);
           navigator.clipboard.writeText(shortenUrl).then(() => {
             toast.success("Short URL Copied to Clipboard", {
                 position: "bottom-center",
