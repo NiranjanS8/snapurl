@@ -22,29 +22,32 @@ ChartJS.register(
 );
 
 const Graph = ({ graphData, compact = false }) => {
-  const labels = graphData?.map((item) => `${item.clickDate}`);
-  const clicksPerDay = graphData?.map((item) => item.count ?? item.clickCount);
+  const sortedGraphData = [...(graphData || [])].sort(
+    (firstItem, secondItem) => new Date(firstItem.clickDate) - new Date(secondItem.clickDate)
+  );
+  const labels = sortedGraphData.map((item) => `${item.clickDate}`);
+  const clicksPerDay = sortedGraphData.map((item) => item.count ?? item.clickCount);
 
   const data = {
     labels:
-      graphData.length > 0
+      sortedGraphData.length > 0
         ? labels
         : ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
     datasets: [
       {
         label: "Total Clicks",
         data:
-          graphData.length > 0
+          sortedGraphData.length > 0
             ? clicksPerDay
             : [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1],
-        borderColor: graphData.length > 0 ? "rgba(122, 90, 248, 0.95)" : "rgba(180, 165, 165, 0.28)",
-        backgroundColor: graphData.length > 0 ? "rgba(122, 90, 248, 0.12)" : "rgba(180, 165, 165, 0.06)",
+        borderColor: sortedGraphData.length > 0 ? "rgba(122, 90, 248, 0.95)" : "rgba(180, 165, 165, 0.28)",
+        backgroundColor: sortedGraphData.length > 0 ? "rgba(122, 90, 248, 0.12)" : "rgba(180, 165, 165, 0.06)",
         fill: true,
         tension: 0.38,
         borderWidth: compact ? 2.25 : 3,
-        pointRadius: graphData.length > 0 ? (compact ? 2 : 3) : 0,
+        pointRadius: sortedGraphData.length > 0 ? (compact ? 2 : 3) : 0,
         pointHoverRadius: compact ? 4 : 5,
-        pointBackgroundColor: graphData.length > 0 ? "#7A5AF8" : "rgba(180, 165, 165, 0.3)",
+        pointBackgroundColor: sortedGraphData.length > 0 ? "#7A5AF8" : "rgba(180, 165, 165, 0.3)",
         pointBorderWidth: 0,
         pointHitRadius: compact ? 12 : 16,
       },
