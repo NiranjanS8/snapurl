@@ -1,16 +1,61 @@
 version: "3.9"
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: snapurl-rabbitmq
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: snapurl-app
     restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      DB_URL: ${DB_URL:-jdbc:mysql://mysql:3306/snap_url}
+      DB_USERNAME: ${DB_USERNAME:-snapurl}
+      DB_PASSWORD: ${DB_PASSWORD:-Snapurl@123}
+      JWT_SECRET: ${JWT_SECRET:-ZGV2LW9ubHktc25hcHVybC1qd3Qtc2VjcmV0LWNoYW5nZS1iZWZvcmUtZGVwbG95LWtleQ==}
+      MAX_FAILED_LOGIN_ATTEMPTS: ${MAX_FAILED_LOGIN_ATTEMPTS:-5}
+      ACCOUNT_LOCK_MINUTES: ${ACCOUNT_LOCK_MINUTES:-15}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      EXPOSE_RESET_CODE: ${EXPOSE_RESET_CODE:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "9090:9090"
+
+  mysql:
+    image: mysql:8.4
+    container_name: snapurl-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-snap_url}
+      MYSQL_USER: ${MYSQL_USER:-snapurl}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-Snapurl@123}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Root@12345}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-Root@12345}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -18,3 +63,23 @@ services:
     restart: unless-stopped
     ports:
       - "6399:6379"
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: snapurl-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  mysql_data:
+  redis_data:
+  rabbitmq_data:

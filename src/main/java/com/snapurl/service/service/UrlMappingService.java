@@ -178,10 +178,21 @@ public class UrlMappingService {
             return host != null
                     && !host.isBlank()
                     && host.matches(HOSTNAME_PATTERN)
+                    && hasNonNumericTopPrivateLabel(host)
                     && InternetDomainName.from(host).hasPublicSuffix();
         } catch (IllegalArgumentException ex) {
             return false;
         }
+    }
+
+    private boolean hasNonNumericTopPrivateLabel(String host) {
+        String[] labels = host.split("\\.");
+        if (labels.length < 2) {
+            return false;
+        }
+
+        String topPrivateLabel = labels[labels.length - 2];
+        return topPrivateLabel.chars().anyMatch(ch -> !Character.isDigit(ch));
     }
 
     public List<UrlMappingDTO> getUrlsByUser(Users user) {

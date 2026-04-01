@@ -34,6 +34,7 @@ build/
 
 # Local secrets / overrides
 .env
+.env.docker
 .env.local
 src/main/resources/application-local.properties
 .m2repo/
