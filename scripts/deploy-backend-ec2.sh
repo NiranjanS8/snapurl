@@ -23,6 +23,10 @@ if [[ ! -f ".env.aws" ]]; then
 fi
 
 mkdir -p "$APP_DIR/logs"
+mkdir -p "$APP_DIR/monitoring/prometheus"
+mkdir -p "$APP_DIR/monitoring/grafana/provisioning/datasources"
+mkdir -p "$APP_DIR/monitoring/grafana/provisioning/dashboards"
+mkdir -p "$APP_DIR/monitoring/grafana/dashboards"
 
 echo "Deploying branch: $BRANCH"
 git fetch origin "$BRANCH"

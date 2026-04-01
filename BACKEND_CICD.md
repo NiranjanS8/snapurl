@@ -76,6 +76,12 @@ JPA_SHOW_SQL=false
 RATE_LIMIT_FAIL_OPEN=false
 LOG_LEVEL_ROOT=INFO
 LOG_LEVEL_APP=INFO
+MANAGEMENT_SERVER_PORT=9091
+PROMETHEUS_HOST_PORT=9095
+GRAFANA_HOST_PORT=3000
+GRAFANA_ROOT_URL=http://localhost:3000/snap/share/go/dashboard/
+GRAFANA_ADMIN_USER=your-grafana-login
+GRAFANA_ADMIN_PASSWORD=your-strong-grafana-password
 ```
 
 ## Log files on EC2
@@ -97,6 +103,30 @@ Rolled log files:
 ```text
 /home/ubuntu/snapurl/logs/archive/
 ```
+
+## Metrics and Grafana
+
+The backend now exposes Prometheus metrics on the internal management port:
+
+```text
+http://app:9091/actuator/prometheus
+```
+
+Prometheus and Grafana are started as part of Docker Compose and are bound to localhost on EC2 by default.
+
+To access Grafana safely from your machine, create an SSH tunnel:
+
+```bash
+ssh -i your-key.pem -L 3000:127.0.0.1:3000 ubuntu@your-ec2-public-ip
+```
+
+Then open:
+
+```text
+http://localhost:3000/snap/share/go/dashboard/
+```
+
+If you want to use your own Grafana login on EC2, put it only in `.env.aws`, not in git.
 
 ## Important note
 
