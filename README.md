@@ -118,3 +118,13 @@ The frontend is a dark, minimal SaaS-style interface built around:
 - **Frontend:** React, Vite, Tailwind CSS
 - **Auth:** JWT access tokens, refresh tokens, reset codes
 - **Testing:** JUnit, Mockito
+
+## API Docs
+
+Swagger UI is available at:
+
+- `/swagger-ui.html`
+
+OpenAPI JSON is available at:
+
+- `/v3/api-docs`
