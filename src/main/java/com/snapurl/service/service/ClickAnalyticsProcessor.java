@@ -6,11 +6,13 @@ import com.snapurl.service.models.UrlMapping;
 import com.snapurl.service.repositories.ClickEventRepo;
 import com.snapurl.service.repositories.UrlMappingRepo;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ClickAnalyticsProcessor {
 
     private final UrlMappingRepo urlMappingRepo;
@@ -24,6 +26,8 @@ public class ClickAnalyticsProcessor {
                 message.getClickedAt()
         );
         if (updatedRows == 0) {
+            log.warn("Analytics event skipped because url mapping was not found urlMappingId={} shortUrl={}",
+                    message.getUrlMappingId(), message.getShortUrl());
             return;
         }
 
@@ -36,5 +40,6 @@ public class ClickAnalyticsProcessor {
         if (message.getUserId() != null) {
             analyticsCacheService.evictForUser(message.getUserId());
         }
+        log.info("Analytics event processed for shortUrl={} userId={}", message.getShortUrl(), message.getUserId());
     }
 }

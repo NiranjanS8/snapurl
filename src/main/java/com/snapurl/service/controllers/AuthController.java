@@ -13,6 +13,7 @@ import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/auth")
+@Slf4j
 public class AuthController {
 
 
@@ -50,12 +52,14 @@ public class AuthController {
 
     @PostMapping("/public/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
+        String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
-                "snapurl:rate-limit:register:" + extractClientIp(request),
+                "snapurl:rate-limit:register:" + clientIp,
                 registerPerHour,
                 Duration.ofHours(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Registration rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many registration attempts. Please try again later.", rateLimitResult);
         }
 
@@ -65,62 +69,75 @@ public class AuthController {
         user.setPassword(registerRequest.getPassword());
         user.setRole("ROLE_USER");
         userService.registerUser(user);
+        log.info("User registration succeeded for email={} ip={}", registerRequest.getEmail(), clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body("User Registered Successfully");
     }
 
     @PostMapping("/public/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+        String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
-                "snapurl:rate-limit:login:" + extractClientIp(request) + ":" + normalizeEmail(loginRequest.getEmail()),
+                "snapurl:rate-limit:login:" + clientIp + ":" + normalizeEmail(loginRequest.getEmail()),
                 loginPerWindow,
                 Duration.ofMinutes(15)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Login rate limit exceeded for email={} ip={}", normalizeEmail(loginRequest.getEmail()), clientIp);
             throw new RateLimitExceededException("Too many login attempts. Please try again later.", rateLimitResult);
         }
+        log.info("Login request accepted for email={} ip={}", normalizeEmail(loginRequest.getEmail()), clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.loginUser(loginRequest));
     }
 
     @PostMapping("/public/refresh")
     public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest, HttpServletRequest request) {
+        String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
-                "snapurl:rate-limit:refresh:" + extractClientIp(request),
+                "snapurl:rate-limit:refresh:" + clientIp,
                 refreshPerWindow,
                 Duration.ofMinutes(15)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Refresh token rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many token refresh attempts. Please try again later.", rateLimitResult);
         }
 
+        log.info("Refresh token request accepted for ip={}", clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.refreshAccessToken(refreshTokenRequest));
     }
 
     @PostMapping("/public/forgot-password")
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest, HttpServletRequest request) {
+        String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
-                "snapurl:rate-limit:forgot-password:" + extractClientIp(request),
+                "snapurl:rate-limit:forgot-password:" + clientIp,
                 forgotPasswordPerHour,
                 Duration.ofHours(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Forgot-password rate limit exceeded for email={} ip={}", normalizeEmail(forgotPasswordRequest.getEmail()), clientIp);
             throw new RateLimitExceededException("Too many password reset requests. Please try again later.", rateLimitResult);
         }
 
+        log.info("Forgot-password request accepted for email={} ip={}", normalizeEmail(forgotPasswordRequest.getEmail()), clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.requestPasswordReset(forgotPasswordRequest.getEmail()));
     }
 
     @PostMapping("/public/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest resetPasswordRequest, HttpServletRequest request) {
+        String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
-                "snapurl:rate-limit:reset-password:" + extractClientIp(request),
+                "snapurl:rate-limit:reset-password:" + clientIp,
                 resetPasswordPerHour,
                 Duration.ofHours(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Reset-password rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many password reset attempts. Please try again later.", rateLimitResult);
         }
 
         userService.resetPassword(resetPasswordRequest);
+        log.info("Password reset completed for ip={}", clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body("Password reset successfully");
     }
 

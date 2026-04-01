@@ -74,6 +74,28 @@ Recommended production values:
 JPA_DDL_AUTO=validate
 JPA_SHOW_SQL=false
 RATE_LIMIT_FAIL_OPEN=false
+LOG_LEVEL_ROOT=INFO
+LOG_LEVEL_APP=INFO
+```
+
+## Log files on EC2
+
+Backend logs are written to files on the EC2 host through the Docker bind mount:
+
+```text
+/home/ubuntu/snapurl/logs/
+```
+
+Main log file:
+
+```text
+/home/ubuntu/snapurl/logs/snapurl.log
+```
+
+Rolled log files:
+
+```text
+/home/ubuntu/snapurl/logs/archive/
 ```
 
 ## Important note

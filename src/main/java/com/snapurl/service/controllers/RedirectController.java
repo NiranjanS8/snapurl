@@ -3,6 +3,7 @@ package com.snapurl.service.controllers;
 import com.snapurl.service.models.UrlMapping;
 import com.snapurl.service.service.UrlMappingService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @AllArgsConstructor
+@Slf4j
 public class RedirectController {
 
     private UrlMappingService urlMappingService;
@@ -23,10 +25,12 @@ public class RedirectController {
         // If the short URL exists, redirect to the original URL
         if(urlMapping != null){
             urlMappingService.trackRedirect(urlMapping);
+            log.info("Redirect resolved for shortUrl={}", shortUrl);
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", urlMapping.getOriginalUrl());
             return ResponseEntity.status(302).headers(headers).build();
         } else {
+            log.warn("Redirect target not found for shortUrl={}", shortUrl);
             return ResponseEntity.notFound().build();
         }
 

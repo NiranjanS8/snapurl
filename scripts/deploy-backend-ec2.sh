@@ -22,6 +22,8 @@ if [[ ! -f ".env.aws" ]]; then
   exit 1
 fi
 
+mkdir -p "$APP_DIR/logs"
+
 echo "Deploying branch: $BRANCH"
 git fetch origin "$BRANCH"
 git checkout "$BRANCH"

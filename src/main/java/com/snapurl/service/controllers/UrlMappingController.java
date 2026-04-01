@@ -12,6 +12,7 @@ import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/urls")
+@Slf4j
 public class UrlMappingController {
 
     private final UrlMappingService urlMappingService;
@@ -55,16 +57,19 @@ public class UrlMappingController {
 
     @PostMapping("/public/shorten")
     public ResponseEntity<?> createPublicShortUrl(@Valid @RequestBody ShortenUrlRequest request, HttpServletRequest httpServletRequest) {
+        String clientIp = extractClientIp(httpServletRequest);
         RateLimitResult rateLimitResult = rateLimitService.check(
-                "snapurl:rate-limit:public-shorten:" + extractClientIp(httpServletRequest),
+                "snapurl:rate-limit:public-shorten:" + clientIp,
                 publicShortenPerMinute,
                 Duration.ofMinutes(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Public shorten rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many public shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), null);
+        log.info("Public shorten created shortUrl={} ip={}", urlMappingDTO.getShortUrl(), clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
@@ -81,10 +86,12 @@ public class UrlMappingController {
                 Duration.ofMinutes(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            log.warn("Authenticated shorten rate limit exceeded for email={}", principal.getName());
             throw new RateLimitExceededException("Too many shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), user);
+        log.info("Authenticated shorten created shortUrl={} email={}", urlMappingDTO.getShortUrl(), principal.getName());
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
@@ -93,6 +100,7 @@ public class UrlMappingController {
     public ResponseEntity<?> deleteShortUrl(@PathVariable Long id, Principal principal) {
         Users user = userService.findByEmail(principal.getName());
         urlMappingService.deleteUrl(id, user);
+        log.info("Short URL deleted id={} email={}", id, principal.getName());
         return ResponseEntity.noContent().build();
     }
 
@@ -144,6 +152,7 @@ public class UrlMappingController {
         LocalDateTime end = LocalDateTime.parse(endDate, formatter);
         Users user = userService.findByEmail(principal.getName());
         List<ClickEventDTO> analytics = urlMappingService.getClickEventByDate(shortUrl, start, end, user);
+        log.info("URL analytics requested shortUrl={} email={}", shortUrl, principal.getName());
         return ResponseEntity.ok(analytics);
     }
 
@@ -158,6 +167,7 @@ public class UrlMappingController {
         LocalDate start = LocalDate.parse(startDate, formatter);
         LocalDate end = LocalDate.parse(endDate, formatter);
         Map<LocalDate, Long> totalClicks = urlMappingService.getTotalClicksByUserAndDate(user, start, end);
+        log.info("Total clicks analytics requested email={} startDate={} endDate={}", principal.getName(), startDate, endDate);
         return ResponseEntity.ok(totalClicks);
     }
 

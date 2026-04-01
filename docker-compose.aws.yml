@@ -16,6 +16,10 @@ services:
         condition: service_started
     env_file:
       - .env.aws
+    environment:
+      LOG_PATH: /app/logs
+    volumes:
+      - ./logs:/app/logs
     ports:
       - "9090:9090"
 

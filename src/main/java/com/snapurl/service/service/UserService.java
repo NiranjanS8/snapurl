@@ -12,6 +12,7 @@ import com.snapurl.service.repositories.RefreshTokenRepo;
 import com.snapurl.service.repositories.UserRepo;
 import com.snapurl.service.security.JwtAuthenticationResponse;
 import com.snapurl.service.security.JwtUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.AuthenticationException;
@@ -30,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class UserService {
 
     private static final Set<String> ALLOWED_EMAIL_DOMAINS = Set.of(
@@ -88,21 +90,25 @@ public class UserService {
     // This method handles user registration by encoding the password and saving the user to the database
     @Transactional
     public Users registerUser(Users user) {
-        validateEmail(user.getEmail());
+        String normalizedEmail = validateEmail(user.getEmail());
         validateUsername(user.getUsername());
         validatePassword(user.getPassword());
 
-        if (userRepo.findByEmail(user.getEmail().trim().toLowerCase()).isPresent()) {
+        if (userRepo.findByEmail(normalizedEmail).isPresent()) {
+            log.warn("Registration rejected because email already exists: {}", normalizedEmail);
             throw new IllegalStateException("An account with this email already exists.");
         }
         if (userRepo.findByUsername(user.getUsername().trim()).isPresent()) {
+            log.warn("Registration rejected because username already exists: {}", user.getUsername().trim());
             throw new IllegalStateException("That username is already taken.");
         }
 
-        user.setEmail(user.getEmail().trim().toLowerCase());
+        user.setEmail(normalizedEmail);
         user.setUsername(user.getUsername().trim());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepo.save(user);
+        Users savedUser = userRepo.save(user);
+        log.info("User registered email={} username={}", savedUser.getEmail(), savedUser.getUsername());
+        return savedUser;
     }
 
     // This method handles user login and returns a JWT token if authentication is successful
@@ -111,6 +117,7 @@ public class UserService {
         String normalizedEmail = validateEmail(loginRequest.getEmail());
         Users existingUser = userRepo.findByEmail(normalizedEmail).orElse(null);
         if (existingUser != null && isAccountLocked(existingUser)) {
+            log.warn("Login blocked for locked account email={}", normalizedEmail);
             throw new AccountLockedException("Too many failed login attempts. Your account is temporarily locked. Please try again later.");
         }
 
@@ -123,6 +130,7 @@ public class UserService {
             if (existingUser != null) {
                 registerFailedLogin(existingUser);
             }
+            log.warn("Login failed for email={}", normalizedEmail);
             throw ex;
         }
         // If authentication is successful, set the authentication in the security context
@@ -133,6 +141,7 @@ public class UserService {
         Users user = findByEmail(userDetails.getEmail());
         resetLoginFailures(user);
         String refreshToken = createRefreshToken(user).getToken();
+        log.info("Login succeeded for email={}", user.getEmail());
 
         return new JwtAuthenticationResponse(accessToken, refreshToken, "Bearer");
     }
@@ -169,6 +178,7 @@ public class UserService {
 
         String accessToken = jwtUtils.generateToken(user.getEmail(), user.getRole());
         String rotatedRefreshToken = createRefreshToken(user).getToken();
+        log.info("Refresh token rotated for email={}", user.getEmail());
 
         return new JwtAuthenticationResponse(accessToken, rotatedRefreshToken, "Bearer");
     }
@@ -181,11 +191,13 @@ public class UserService {
 
         String normalizedEmail = email.trim().toLowerCase();
         if (!isAllowedEmail(normalizedEmail)) {
+            log.info("Password reset requested for unsupported email domain email={}", normalizedEmail);
             return new ForgotPasswordResponse("If an account exists for that email, a reset code has been prepared.", null);
         }
 
         Users user = userRepo.findByEmail(normalizedEmail).orElse(null);
         if (user == null) {
+            log.info("Password reset requested for unknown email={}", normalizedEmail);
             return new ForgotPasswordResponse("If an account exists for that email, a reset code has been prepared.", null);
         }
 
@@ -201,6 +213,7 @@ public class UserService {
         passwordResetToken.setExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes));
         passwordResetTokenRepo.save(passwordResetToken);
         passwordResetEmailService.sendResetCode(user, passwordResetToken.getToken(), passwordResetExpirationMinutes);
+        log.info("Password reset code generated for email={}", user.getEmail());
 
         return new ForgotPasswordResponse(
                 "If an account exists for that email, a reset code has been prepared.",
@@ -219,6 +232,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset code."));
 
         if (resetToken.isUsed() || resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            log.warn("Password reset rejected due to invalid or expired code");
             throw new IllegalArgumentException("Invalid or expired reset code.");
         }
 
@@ -234,6 +248,7 @@ public class UserService {
             token.setRevoked(true);
             refreshTokenRepo.save(token);
         });
+        log.info("Password reset completed and refresh tokens revoked for email={}", user.getEmail());
     }
 
     private RefreshToken createRefreshToken(Users user) {
@@ -302,8 +317,10 @@ public class UserService {
         if (nextAttemptCount >= maxFailedLoginAttempts) {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(LocalDateTime.now().plusMinutes(accountLockMinutes));
+            log.warn("Account locked for email={} until={}", user.getEmail(), user.getLockedUntil());
         } else {
             user.setFailedLoginAttempts(nextAttemptCount);
+            log.warn("Failed login recorded for email={} attempts={}", user.getEmail(), nextAttemptCount);
         }
         userRepo.save(user);
     }
@@ -313,6 +330,7 @@ public class UserService {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
             userRepo.save(user);
+            log.info("Login failure counters reset for email={}", user.getEmail());
         }
     }
 }
