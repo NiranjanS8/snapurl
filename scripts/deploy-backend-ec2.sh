@@ -32,3 +32,18 @@ docker compose -f docker-compose.aws.yml --env-file .env.aws up -d --build
 
 echo "Current containers:"
 docker compose -f docker-compose.aws.yml ps
+
+echo "Waiting for backend health check"
+for attempt in {1..18}; do
+  if curl --silent --fail http://127.0.0.1:9090/api/health >/dev/null; then
+    echo "Backend health check passed"
+    exit 0
+  fi
+
+  echo "Health check not ready yet (attempt $attempt/18)"
+  sleep 5
+done
+
+echo "Backend health check failed"
+docker compose -f docker-compose.aws.yml --env-file .env.aws logs app --tail 100
+exit 1

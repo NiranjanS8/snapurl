@@ -14,6 +14,7 @@ On every push to `main` or `master` that changes backend-related files, GitHub A
 ```bash
 docker compose -f docker-compose.aws.yml --env-file .env.aws up -d --build
 ```
+5. wait for `http://127.0.0.1:9090/api/health` to return success
 
 Pull requests only run the test job. They do not deploy.
 
