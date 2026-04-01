@@ -18,6 +18,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.security.Principal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -106,5 +109,23 @@ class UrlMappingControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(rateLimitService).check(eq("snapurl:rate-limit:auth-shorten:tester@example.com"), eq(3L), any());
+    }
+
+    @Test
+    void getUrlAnalyticsUsesAuthenticatedUsersOwnershipContext() {
+        Users user = new Users();
+        user.setId(10L);
+        user.setEmail("tester@example.com");
+
+        when(principal.getName()).thenReturn("tester@example.com");
+        when(userService.findByEmail("tester@example.com")).thenReturn(user);
+        when(urlMappingService.getClickEventByDate(eq("mine123"), any(LocalDateTime.class), any(LocalDateTime.class), eq(user)))
+                .thenReturn(List.of());
+
+        var response = controller.getUrlAnalytics("mine123", "2026-04-01T00:00:00", "2026-04-01T23:59:59", principal);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(userService).findByEmail("tester@example.com");
+        verify(urlMappingService).getClickEventByDate(eq("mine123"), any(LocalDateTime.class), any(LocalDateTime.class), eq(user));
     }
 }

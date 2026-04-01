@@ -201,4 +201,25 @@ class UrlMappingServiceTest {
         verify(analyticsCacheService).evictForShortUrl("remove-me");
         verify(analyticsCacheService).evictForUser(1L);
     }
+
+    @Test
+    void getClickEventByDateRejectsAccessForDifferentOwner() {
+        Users owner = new Users();
+        owner.setId(99L);
+
+        UrlMapping urlMapping = new UrlMapping();
+        urlMapping.setId(50L);
+        urlMapping.setShortUrl("private123");
+        urlMapping.setUser(owner);
+
+        when(analyticsCacheService.getUrlAnalytics(any(), any(), any())).thenReturn(null);
+        when(urlMappingRepo.findByShortUrl("private123")).thenReturn(urlMapping);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> urlMappingService.getClickEventByDate("private123", java.time.LocalDateTime.now().minusDays(1), java.time.LocalDateTime.now(), user)
+        );
+
+        assertEquals("You can only view analytics for your own short links", exception.getMessage());
+    }
 }

@@ -217,7 +217,7 @@ public class UrlMappingService {
         return urlMappingRepo.searchUserUrls(user, query, sortBy, order, cursor, safeSize, startDate, endDate, minClicks, maxClicks, status);
     }
 
-    public List<ClickEventDTO> getClickEventByDate(String shortUrl, LocalDateTime start, LocalDateTime end) {
+    public List<ClickEventDTO> getClickEventByDate(String shortUrl, LocalDateTime start, LocalDateTime end, Users user) {
         List<ClickEventDTO> cachedAnalytics = analyticsCacheService.getUrlAnalytics(shortUrl, start, end);
         if (cachedAnalytics != null) {
             return cachedAnalytics;
@@ -225,6 +225,9 @@ public class UrlMappingService {
 
         UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
         if(urlMapping != null) {
+            if (urlMapping.getUser() == null || user == null || !urlMapping.getUser().getId().equals(user.getId())) {
+                throw new IllegalArgumentException("You can only view analytics for your own short links");
+            }
             List<ClickEventDTO> analytics = clickEventRepo.findByUrlMappingAndClickTimeBetween(urlMapping, start, end)
                     .stream().collect(Collectors.groupingBy(click -> click.getClickTime().toLocalDate(),
                             Collectors.counting())).entrySet().stream().map(entry -> {
