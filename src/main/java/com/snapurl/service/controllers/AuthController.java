@@ -10,6 +10,7 @@ import com.snapurl.service.models.Users;
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
+import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +33,7 @@ public class AuthController {
 
     private final UserService userService;
     private final RateLimitService rateLimitService;
+    private final AppMetricsService appMetricsService;
     @Value("${snapurl.rate-limit.login-per-15-minutes:5}")
     private long loginPerWindow;
     @Value("${snapurl.rate-limit.register-per-hour:5}")
@@ -45,9 +47,10 @@ public class AuthController {
     @Value("${snapurl.rate-limit.trust-forwarded-header:false}")
     private boolean trustForwardedHeader;
 
-    public AuthController(UserService userService, RateLimitService rateLimitService) {
+    public AuthController(UserService userService, RateLimitService rateLimitService, AppMetricsService appMetricsService) {
         this.userService = userService;
         this.rateLimitService = rateLimitService;
+        this.appMetricsService = appMetricsService;
     }
 
     @PostMapping("/public/register")
@@ -59,6 +62,7 @@ public class AuthController {
                 Duration.ofHours(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("auth_register");
             log.warn("Registration rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many registration attempts. Please try again later.", rateLimitResult);
         }
@@ -82,6 +86,7 @@ public class AuthController {
                 Duration.ofMinutes(15)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("auth_login");
             log.warn("Login rate limit exceeded for email={} ip={}", normalizeEmail(loginRequest.getEmail()), clientIp);
             throw new RateLimitExceededException("Too many login attempts. Please try again later.", rateLimitResult);
         }
@@ -98,6 +103,7 @@ public class AuthController {
                 Duration.ofMinutes(15)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("auth_refresh");
             log.warn("Refresh token rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many token refresh attempts. Please try again later.", rateLimitResult);
         }
@@ -115,6 +121,7 @@ public class AuthController {
                 Duration.ofHours(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("auth_forgot_password");
             log.warn("Forgot-password rate limit exceeded for email={} ip={}", normalizeEmail(forgotPasswordRequest.getEmail()), clientIp);
             throw new RateLimitExceededException("Too many password reset requests. Please try again later.", rateLimitResult);
         }
@@ -132,6 +139,7 @@ public class AuthController {
                 Duration.ofHours(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("auth_reset_password");
             log.warn("Reset-password rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many password reset attempts. Please try again later.", rateLimitResult);
         }

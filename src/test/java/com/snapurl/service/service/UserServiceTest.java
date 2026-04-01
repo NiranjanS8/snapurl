@@ -48,6 +48,8 @@ class UserServiceTest {
     @Mock
     private JwtUtils jwtUtils;
     @Mock
+    private AppMetricsService appMetricsService;
+    @Mock
     private RefreshTokenRepo refreshTokenRepo;
     @Mock
     private PasswordResetTokenRepo passwordResetTokenRepo;

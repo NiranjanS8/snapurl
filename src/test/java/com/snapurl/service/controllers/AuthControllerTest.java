@@ -11,6 +11,7 @@ import com.snapurl.service.security.JwtAuthenticationResponse;
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
+import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,13 +38,15 @@ class AuthControllerTest {
     @Mock
     private RateLimitService rateLimitService;
     @Mock
+    private AppMetricsService appMetricsService;
+    @Mock
     private HttpServletRequest httpServletRequest;
 
     private AuthController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new AuthController(userService, rateLimitService);
+        controller = new AuthController(userService, rateLimitService, appMetricsService);
         ReflectionTestUtils.setField(controller, "loginPerWindow", 5L);
         ReflectionTestUtils.setField(controller, "registerPerHour", 5L);
         ReflectionTestUtils.setField(controller, "refreshPerWindow", 10L);

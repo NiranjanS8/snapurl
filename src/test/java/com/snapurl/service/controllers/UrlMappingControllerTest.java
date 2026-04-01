@@ -6,6 +6,7 @@ import com.snapurl.service.models.Users;
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
+import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,8 @@ class UrlMappingControllerTest {
     @Mock
     private RateLimitService rateLimitService;
     @Mock
+    private AppMetricsService appMetricsService;
+    @Mock
     private HttpServletRequest httpServletRequest;
     @Mock
     private Principal principal;
@@ -48,7 +51,7 @@ class UrlMappingControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new UrlMappingController(urlMappingService, userService, rateLimitService);
+        controller = new UrlMappingController(urlMappingService, userService, rateLimitService, appMetricsService);
         ReflectionTestUtils.setField(controller, "publicShortenPerMinute", 3L);
         ReflectionTestUtils.setField(controller, "authShortenPerMinute", 3L);
         ReflectionTestUtils.setField(controller, "trustForwardedHeader", false);

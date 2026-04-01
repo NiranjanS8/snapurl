@@ -53,6 +53,7 @@ public class UserService {
     private UserRepo userRepo;
     private AuthenticationManager authenticationManager;
     private JwtUtils jwtUtils;
+    private AppMetricsService appMetricsService;
     private RefreshTokenRepo refreshTokenRepo;
     private PasswordResetTokenRepo passwordResetTokenRepo;
     private PasswordResetEmailService passwordResetEmailService;
@@ -62,6 +63,7 @@ public class UserService {
             UserRepo userRepo,
             AuthenticationManager authenticationManager,
             JwtUtils jwtUtils,
+            AppMetricsService appMetricsService,
             RefreshTokenRepo refreshTokenRepo,
             PasswordResetTokenRepo passwordResetTokenRepo,
             PasswordResetEmailService passwordResetEmailService
@@ -70,6 +72,7 @@ public class UserService {
         this.userRepo = userRepo;
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
+        this.appMetricsService = appMetricsService;
         this.refreshTokenRepo = refreshTokenRepo;
         this.passwordResetTokenRepo = passwordResetTokenRepo;
         this.passwordResetEmailService = passwordResetEmailService;
@@ -130,6 +133,7 @@ public class UserService {
             if (existingUser != null) {
                 registerFailedLogin(existingUser);
             }
+            appMetricsService.recordLoginFailure();
             log.warn("Login failed for email={}", normalizedEmail);
             throw ex;
         }

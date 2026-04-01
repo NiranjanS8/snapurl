@@ -8,6 +8,7 @@ import com.snapurl.service.models.Users;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitService;
+import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
 import jakarta.validation.Valid;
@@ -35,6 +36,7 @@ public class UrlMappingController {
     private final UrlMappingService urlMappingService;
     private final UserService userService;
     private final RateLimitService rateLimitService;
+    private final AppMetricsService appMetricsService;
     @Value("${snapurl.rate-limit.public-shorten-per-minute:10}")
     private long publicShortenPerMinute;
     @Value("${snapurl.rate-limit.auth-shorten-per-minute:30}")
@@ -45,11 +47,13 @@ public class UrlMappingController {
     public UrlMappingController(
             UrlMappingService urlMappingService,
             UserService userService,
-            RateLimitService rateLimitService
+            RateLimitService rateLimitService,
+            AppMetricsService appMetricsService
     ) {
         this.urlMappingService = urlMappingService;
         this.userService = userService;
         this.rateLimitService = rateLimitService;
+        this.appMetricsService = appMetricsService;
     }
 
     // {"originalUrl": "https://www.example.com/some/long/url"}
@@ -64,11 +68,13 @@ public class UrlMappingController {
                 Duration.ofMinutes(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("urls_public_shorten");
             log.warn("Public shorten rate limit exceeded for ip={}", clientIp);
             throw new RateLimitExceededException("Too many public shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), null);
+        appMetricsService.recordLinkCreated("public");
         log.info("Public shorten created shortUrl={} ip={}", urlMappingDTO.getShortUrl(), clientIp);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
@@ -86,11 +92,13 @@ public class UrlMappingController {
                 Duration.ofMinutes(1)
         );
         if (!rateLimitResult.isAllowed()) {
+            appMetricsService.recordRateLimitHit("urls_authenticated_shorten");
             log.warn("Authenticated shorten rate limit exceeded for email={}", principal.getName());
             throw new RateLimitExceededException("Too many shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), user);
+        appMetricsService.recordLinkCreated("authenticated");
         log.info("Authenticated shorten created shortUrl={} email={}", urlMappingDTO.getShortUrl(), principal.getName());
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
