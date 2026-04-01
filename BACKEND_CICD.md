@@ -67,6 +67,14 @@ Fill `.env.aws` with your real production values, then test once manually:
 docker compose -f docker-compose.aws.yml --env-file .env.aws up -d --build
 ```
 
+Recommended production values:
+
+```text
+JPA_DDL_AUTO=validate
+JPA_SHOW_SQL=false
+RATE_LIMIT_FAIL_OPEN=false
+```
+
 ## Important note
 
 The deploy script checks out and pulls the same branch that triggered the workflow. In most cases, that will be `main`.

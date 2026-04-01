@@ -4,6 +4,7 @@ import com.snapurl.service.service.UserDetailsImpl;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,23 @@ public class JwtUtils {
     @Value("${jwt.expiration}")
     private int jwtExpirationMs; // 24 hours
 
+    @PostConstruct
+    void validateConfiguration() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("JWT secret is required. Set JWT_SECRET to a valid Base64-encoded key.");
+        }
+
+        try {
+            byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+            if (keyBytes.length < 32) {
+                throw new IllegalStateException("JWT secret must decode to at least 32 bytes.");
+            }
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("JWT secret must be a valid Base64-encoded key.", ex);
+        }
+    }
 
     // Extract JWT token from the Authorization header
     public String getJwtFromHeader(HttpServletRequest request){
