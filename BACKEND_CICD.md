@@ -113,6 +113,7 @@ http://app:9091/actuator/prometheus
 ```
 
 Prometheus and Grafana are started as part of Docker Compose and are bound to localhost on EC2 by default.
+MySQL and Redis stay internal-only in the AWS compose file. RabbitMQ management is bound to localhost only.
 
 To access Grafana safely from your machine, create an SSH tunnel:
 

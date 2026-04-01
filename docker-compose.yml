@@ -15,8 +15,8 @@ services:
     environment:
       DB_URL: ${DB_URL:-jdbc:mysql://mysql:3306/snap_url}
       DB_USERNAME: ${DB_USERNAME:-snapurl}
-      DB_PASSWORD: ${DB_PASSWORD:-Snapurl@123}
-      JWT_SECRET: ${JWT_SECRET:-ZGV2LW9ubHktc25hcHVybC1qd3Qtc2VjcmV0LWNoYW5nZS1iZWZvcmUtZGVwbG95LWtleQ==}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your environment or .env file}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in your environment or .env file}
       MAX_FAILED_LOGIN_ATTEMPTS: ${MAX_FAILED_LOGIN_ATTEMPTS:-5}
       ACCOUNT_LOCK_MINUTES: ${ACCOUNT_LOCK_MINUTES:-15}
       MAIL_ENABLED: ${MAIL_ENABLED:-false}
@@ -25,7 +25,7 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      EXPOSE_RESET_CODE: ${EXPOSE_RESET_CODE:-true}
+      EXPOSE_RESET_CODE: ${EXPOSE_RESET_CODE:-false}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -64,8 +64,8 @@ services:
     depends_on:
       - prometheus
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin@example.com}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-now}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000/snap/share/go/dashboard/}
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       GF_USERS_ALLOW_SIGN_UP: "false"
@@ -83,14 +83,14 @@ services:
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-snap_url}
       MYSQL_USER: ${MYSQL_USER:-snapurl}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-Snapurl@123}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Root@12345}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in your environment or .env file}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in your environment or .env file}
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-Root@12345}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -100,7 +100,7 @@ services:
     container_name: snapurl-redis
     restart: unless-stopped
     ports:
-      - "6399:6379"
+      - "127.0.0.1:6399:6379"
     volumes:
       - redis_data:/data
 
@@ -109,11 +109,11 @@ services:
     container_name: snapurl-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in your environment or .env file}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in your environment or .env file}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
