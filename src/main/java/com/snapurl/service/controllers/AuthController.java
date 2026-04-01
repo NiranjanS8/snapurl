@@ -31,6 +31,14 @@ public class AuthController {
     private final RateLimitService rateLimitService;
     @Value("${snapurl.rate-limit.login-per-15-minutes:5}")
     private long loginPerWindow;
+    @Value("${snapurl.rate-limit.register-per-hour:5}")
+    private long registerPerHour;
+    @Value("${snapurl.rate-limit.refresh-per-15-minutes:30}")
+    private long refreshPerWindow;
+    @Value("${snapurl.rate-limit.forgot-password-per-hour:5}")
+    private long forgotPasswordPerHour;
+    @Value("${snapurl.rate-limit.reset-password-per-hour:10}")
+    private long resetPasswordPerHour;
     @Value("${snapurl.rate-limit.trust-forwarded-header:false}")
     private boolean trustForwardedHeader;
 
@@ -40,14 +48,23 @@ public class AuthController {
     }
 
     @PostMapping("/public/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
+        RateLimitResult rateLimitResult = rateLimitService.check(
+                "snapurl:rate-limit:register:" + extractClientIp(request),
+                registerPerHour,
+                Duration.ofHours(1)
+        );
+        if (!rateLimitResult.isAllowed()) {
+            throw new RateLimitExceededException("Too many registration attempts. Please try again later.", rateLimitResult);
+        }
+
         Users user = new Users();
         user.setUsername(registerRequest.getUsername());
         user.setEmail(registerRequest.getEmail());
         user.setPassword(registerRequest.getPassword());
         user.setRole("ROLE_USER");
         userService.registerUser(user);
-        return ResponseEntity.ok("User Registered Successfully");
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body("User Registered Successfully");
     }
 
     @PostMapping("/public/login")
@@ -64,19 +81,46 @@ public class AuthController {
     }
 
     @PostMapping("/public/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
-        return ResponseEntity.ok(userService.refreshAccessToken(refreshTokenRequest));
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest, HttpServletRequest request) {
+        RateLimitResult rateLimitResult = rateLimitService.check(
+                "snapurl:rate-limit:refresh:" + extractClientIp(request),
+                refreshPerWindow,
+                Duration.ofMinutes(15)
+        );
+        if (!rateLimitResult.isAllowed()) {
+            throw new RateLimitExceededException("Too many token refresh attempts. Please try again later.", rateLimitResult);
+        }
+
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.refreshAccessToken(refreshTokenRequest));
     }
 
     @PostMapping("/public/forgot-password")
-    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) {
-        return ResponseEntity.ok(userService.requestPasswordReset(forgotPasswordRequest.getEmail()));
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest, HttpServletRequest request) {
+        RateLimitResult rateLimitResult = rateLimitService.check(
+                "snapurl:rate-limit:forgot-password:" + extractClientIp(request),
+                forgotPasswordPerHour,
+                Duration.ofHours(1)
+        );
+        if (!rateLimitResult.isAllowed()) {
+            throw new RateLimitExceededException("Too many password reset requests. Please try again later.", rateLimitResult);
+        }
+
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.requestPasswordReset(forgotPasswordRequest.getEmail()));
     }
 
     @PostMapping("/public/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest, HttpServletRequest request) {
+        RateLimitResult rateLimitResult = rateLimitService.check(
+                "snapurl:rate-limit:reset-password:" + extractClientIp(request),
+                resetPasswordPerHour,
+                Duration.ofHours(1)
+        );
+        if (!rateLimitResult.isAllowed()) {
+            throw new RateLimitExceededException("Too many password reset attempts. Please try again later.", rateLimitResult);
+        }
+
         userService.resetPassword(resetPasswordRequest);
-        return ResponseEntity.ok("Password reset successfully");
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body("Password reset successfully");
     }
 
     private ResponseEntity.BodyBuilder withRateLimitHeaders(ResponseEntity.BodyBuilder builder, RateLimitResult result) {
