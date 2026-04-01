@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface RefreshTokenRepo extends JpaRepository<RefreshToken, Long> {
     Optional<RefreshToken> findByToken(String token);
     List<RefreshToken> findByUserAndRevokedFalse(Users user);
+    long countByRevokedFalse();
     void deleteByUser(Users user);
     void deleteByExpiresAtBefore(LocalDateTime time);
 }
