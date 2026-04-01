@@ -77,7 +77,7 @@ public class UserService {
     private long refreshTokenExpirationMs;
     @Value("${snapurl.auth.password-reset-expiration-minutes:30}")
     private long passwordResetExpirationMinutes;
-    @Value("${snapurl.auth.expose-reset-token:true}")
+    @Value("${snapurl.auth.expose-reset-token:false}")
     private boolean exposeResetToken;
     @Value("${snapurl.auth.max-failed-login-attempts:5}")
     private int maxFailedLoginAttempts;
