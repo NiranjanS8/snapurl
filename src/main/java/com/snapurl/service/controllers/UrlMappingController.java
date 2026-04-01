@@ -1,6 +1,7 @@
 package com.snapurl.service.controllers;
 
 import com.snapurl.service.dtos.ClickEventDTO;
+import com.snapurl.service.dtos.ShortenUrlRequest;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.Users;
@@ -9,6 +10,7 @@ import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -52,10 +54,7 @@ public class UrlMappingController {
     // https://snapurl.com/v9AuvEYE  -->  https://www.example.com/some/long/url
 
     @PostMapping("/public/shorten")
-    public ResponseEntity<?> createPublicShortUrl(@RequestBody Map<String, String> request, HttpServletRequest httpServletRequest) {
-        String originalUrl = request.get("originalUrl");
-        String customAlias = request.get("customAlias");
-
+    public ResponseEntity<?> createPublicShortUrl(@Valid @RequestBody ShortenUrlRequest request, HttpServletRequest httpServletRequest) {
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:public-shorten:" + extractClientIp(httpServletRequest),
                 publicShortenPerMinute,
@@ -65,17 +64,15 @@ public class UrlMappingController {
             throw new RateLimitExceededException("Too many public shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
-        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, null);
+        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), null);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
     @PostMapping("/shorten")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> createShortUrl(@RequestBody Map<String, String> request,
+    public ResponseEntity<?> createShortUrl(@Valid @RequestBody ShortenUrlRequest request,
                                                         Principal principal) {
 
-        String originalUrl = request.get("originalUrl");
-        String customAlias = request.get("customAlias");
         Users user = userService.findByEmail(principal.getName());
 
         RateLimitResult rateLimitResult = rateLimitService.check(
@@ -87,7 +84,7 @@ public class UrlMappingController {
             throw new RateLimitExceededException("Too many shorten requests. Please try again in a minute.", rateLimitResult);
         }
 
-        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(originalUrl, customAlias, user);
+        UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), user);
         return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 

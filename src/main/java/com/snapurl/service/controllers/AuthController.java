@@ -11,6 +11,7 @@ import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.UserService;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -48,7 +49,7 @@ public class AuthController {
     }
 
     @PostMapping("/public/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:register:" + extractClientIp(request),
                 registerPerHour,
@@ -68,7 +69,7 @@ public class AuthController {
     }
 
     @PostMapping("/public/login")
-    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:login:" + extractClientIp(request) + ":" + normalizeEmail(loginRequest.getEmail()),
                 loginPerWindow,
@@ -81,7 +82,7 @@ public class AuthController {
     }
 
     @PostMapping("/public/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest, HttpServletRequest request) {
+    public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest, HttpServletRequest request) {
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:refresh:" + extractClientIp(request),
                 refreshPerWindow,
@@ -95,7 +96,7 @@ public class AuthController {
     }
 
     @PostMapping("/public/forgot-password")
-    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest, HttpServletRequest request) {
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest, HttpServletRequest request) {
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:forgot-password:" + extractClientIp(request),
                 forgotPasswordPerHour,
@@ -109,7 +110,7 @@ public class AuthController {
     }
 
     @PostMapping("/public/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest, HttpServletRequest request) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest resetPasswordRequest, HttpServletRequest request) {
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:reset-password:" + extractClientIp(request),
                 resetPasswordPerHour,

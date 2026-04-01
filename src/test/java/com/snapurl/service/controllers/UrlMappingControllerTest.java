@@ -1,5 +1,6 @@
 package com.snapurl.service.controllers;
 
+import com.snapurl.service.dtos.ShortenUrlRequest;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.service.RateLimitExceededException;
@@ -18,10 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.security.Principal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,6 +56,9 @@ class UrlMappingControllerTest {
 
     @Test
     void createPublicShortUrlReturns429WithRateLimitHeadersWhenBlocked() {
+        ShortenUrlRequest request = new ShortenUrlRequest();
+        request.setOriginalUrl("https://example.com");
+
         when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
         when(rateLimitService.check(any(), eq(3L), any())).thenReturn(
                 new RateLimitResult(false, 3, 4, 0, 45)
@@ -64,7 +66,7 @@ class UrlMappingControllerTest {
 
         RateLimitExceededException exception = assertThrows(
                 RateLimitExceededException.class,
-                () -> controller.createPublicShortUrl(Map.of("originalUrl", "https://example.com"), httpServletRequest)
+                () -> controller.createPublicShortUrl(request, httpServletRequest)
         );
 
         assertEquals("Too many public shorten requests. Please try again in a minute.", exception.getMessage());
@@ -74,6 +76,9 @@ class UrlMappingControllerTest {
 
     @Test
     void createPublicShortUrlReturnsSuccessWithRateLimitHeaders() {
+        ShortenUrlRequest request = new ShortenUrlRequest();
+        request.setOriginalUrl("https://example.com");
+
         UrlMappingDTO dto = new UrlMappingDTO();
         dto.setShortUrl("abc123");
 
@@ -83,7 +88,7 @@ class UrlMappingControllerTest {
         );
         when(urlMappingService.createShortUrl("https://example.com", null, null)).thenReturn(dto);
 
-        var response = controller.createPublicShortUrl(Map.of("originalUrl", "https://example.com"), httpServletRequest);
+        var response = controller.createPublicShortUrl(request, httpServletRequest);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("3", response.getHeaders().getFirst("X-RateLimit-Limit"));
@@ -93,6 +98,9 @@ class UrlMappingControllerTest {
 
     @Test
     void createShortUrlUsesAuthenticatedPrincipalForRateLimitKey() {
+        ShortenUrlRequest request = new ShortenUrlRequest();
+        request.setOriginalUrl("https://example.com");
+
         Users user = new Users();
         user.setEmail("tester@example.com");
         UrlMappingDTO dto = new UrlMappingDTO();
@@ -105,7 +113,7 @@ class UrlMappingControllerTest {
         );
         when(urlMappingService.createShortUrl("https://example.com", null, user)).thenReturn(dto);
 
-        var response = controller.createShortUrl(Map.of("originalUrl", "https://example.com"), principal);
+        var response = controller.createShortUrl(request, principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(rateLimitService).check(eq("snapurl:rate-limit:auth-shorten:tester@example.com"), eq(3L), any());

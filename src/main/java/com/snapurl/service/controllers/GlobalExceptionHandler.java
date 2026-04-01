@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,6 +43,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<ApiErrorResponse> handleDateParseError(DateTimeParseException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Invalid date format.", request.getRequestURI());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiErrorResponse> handleValidationError(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid request.")
+                .orElse("Invalid request.");
+        return buildResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
