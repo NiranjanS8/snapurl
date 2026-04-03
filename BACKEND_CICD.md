@@ -52,6 +52,11 @@ The workflow expects this structure on EC2:
   Dockerfile
 ```
 
+Environment profile expectations:
+
+- local Docker/dev uses `SPRING_PROFILES_ACTIVE=dev`
+- EC2/prod uses `SPRING_PROFILES_ACTIVE=prod`
+
 ## Recommended first-time setup on EC2
 
 Clone the repo once on the server:
@@ -71,9 +76,7 @@ docker compose -f docker-compose.aws.yml --env-file .env.aws up -d --build
 Recommended production values:
 
 ```text
-JPA_DDL_AUTO=validate
-JPA_SHOW_SQL=false
-RATE_LIMIT_FAIL_OPEN=false
+SPRING_PROFILES_ACTIVE=prod
 LOG_LEVEL_ROOT=INFO
 LOG_LEVEL_APP=INFO
 MANAGEMENT_SERVER_PORT=9091

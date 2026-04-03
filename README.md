@@ -119,6 +119,12 @@ The frontend is a dark, minimal SaaS-style interface built around:
 - **Auth:** JWT access tokens, refresh tokens, reset codes
 - **Testing:** JUnit, Mockito
 
+## Environment Profiles
+
+- `dev` profile is the default for local development
+- `prod` profile is intended for EC2/deployed environments
+- Docker Compose sets these explicitly via `SPRING_PROFILES_ACTIVE`
+
 ## API Docs
 
 Swagger UI is available at:
