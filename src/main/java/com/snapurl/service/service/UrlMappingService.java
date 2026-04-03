@@ -9,6 +9,7 @@ import com.snapurl.service.models.Users;
 import com.snapurl.service.repositories.ClickEventRepo;
 import com.snapurl.service.repositories.UrlMappingRepo;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class UrlMappingService {
 
     public static final String INVALID_URL_MESSAGE = "We'll need a valid URL, like \"super-long-link.com/shorten-it\"";
@@ -46,6 +48,7 @@ public class UrlMappingService {
     private ClickAnalyticsDispatcher clickAnalyticsDispatcher;
     private ShortUrlCacheService shortUrlCacheService;
     private AnalyticsCacheService analyticsCacheService;
+    private AppMetricsService appMetricsService;
 
     public UrlMappingDTO createShortUrl(String originalUrl, String customAlias, Users user) {
         if (!isValidUrl(originalUrl)) {
@@ -261,14 +264,26 @@ public class UrlMappingService {
     }
 
     public UrlMapping getOriginalUrl(String shortUrl) {
-        UrlMapping cachedUrlMapping = shortUrlCacheService.get(shortUrl);
-        if (cachedUrlMapping != null) {
-            return cachedUrlMapping;
+        ShortUrlCacheLookupResult cacheLookupResult = shortUrlCacheService.lookup(shortUrl);
+        if (cacheLookupResult.isHit()) {
+            appMetricsService.recordRedirectCacheHit();
+            return cacheLookupResult.getUrlMapping();
         }
 
+        if (cacheLookupResult.isKnownMissing()) {
+            appMetricsService.recordRedirectNegativeCacheHit();
+            return null;
+        }
+
+        appMetricsService.recordRedirectCacheMiss();
         UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
+        appMetricsService.recordRedirectDatabaseLookup(urlMapping != null);
         if (urlMapping != null) {
             shortUrlCacheService.put(urlMapping);
+            log.debug("Redirect cache populated from database for shortUrl={}", shortUrl);
+        } else {
+            shortUrlCacheService.putMissing(shortUrl);
+            log.debug("Redirect cache stored known-missing marker for shortUrl={}", shortUrl);
         }
         return urlMapping;
     }

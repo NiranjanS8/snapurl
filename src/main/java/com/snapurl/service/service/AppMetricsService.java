@@ -20,6 +20,22 @@ public class AppMetricsService {
         meterRegistry.counter("snapurl.redirects.resolved").increment();
     }
 
+    public void recordRedirectCacheHit() {
+        meterRegistry.counter("snapurl.redirect.cache.lookups", "result", "hit").increment();
+    }
+
+    public void recordRedirectCacheMiss() {
+        meterRegistry.counter("snapurl.redirect.cache.lookups", "result", "miss").increment();
+    }
+
+    public void recordRedirectNegativeCacheHit() {
+        meterRegistry.counter("snapurl.redirect.cache.lookups", "result", "known_missing").increment();
+    }
+
+    public void recordRedirectDatabaseLookup(boolean found) {
+        meterRegistry.counter("snapurl.redirect.db.lookups", "result", found ? "found" : "not_found").increment();
+    }
+
     public void recordLoginFailure() {
         meterRegistry.counter("snapurl.login.failures").increment();
     }

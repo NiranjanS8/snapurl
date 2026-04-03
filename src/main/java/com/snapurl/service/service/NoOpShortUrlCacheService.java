@@ -9,12 +9,16 @@ import org.springframework.stereotype.Service;
 public class NoOpShortUrlCacheService implements ShortUrlCacheService {
 
     @Override
-    public UrlMapping get(String shortUrl) {
-        return null;
+    public ShortUrlCacheLookupResult lookup(String shortUrl) {
+        return ShortUrlCacheLookupResult.miss();
     }
 
     @Override
     public void put(UrlMapping urlMapping) {
+    }
+
+    @Override
+    public void putMissing(String shortUrl) {
     }
 
     @Override

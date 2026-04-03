@@ -33,6 +33,8 @@ class UrlMappingServiceTest {
     private ShortUrlCacheService shortUrlCacheService;
     @Mock
     private AnalyticsCacheService analyticsCacheService;
+    @Mock
+    private AppMetricsService appMetricsService;
 
     @InjectMocks
     private UrlMappingService urlMappingService;
@@ -176,12 +178,37 @@ class UrlMappingServiceTest {
         cachedMapping.setShortUrl("cached123");
         cachedMapping.setOriginalUrl("https://example.com/cached");
 
-        when(shortUrlCacheService.get("cached123")).thenReturn(cachedMapping);
+        when(shortUrlCacheService.lookup("cached123")).thenReturn(ShortUrlCacheLookupResult.hit(cachedMapping));
 
         UrlMapping result = urlMappingService.getOriginalUrl("cached123");
 
         assertEquals(cachedMapping, result);
         verify(urlMappingRepo, never()).findByShortUrl("cached123");
+        verify(appMetricsService).recordRedirectCacheHit();
+    }
+
+    @Test
+    void getOriginalUrlReturnsNullWhenShortUrlIsCachedAsMissing() {
+        when(shortUrlCacheService.lookup("missing123")).thenReturn(ShortUrlCacheLookupResult.knownMissing());
+
+        UrlMapping result = urlMappingService.getOriginalUrl("missing123");
+
+        assertEquals(null, result);
+        verify(urlMappingRepo, never()).findByShortUrl("missing123");
+        verify(appMetricsService).recordRedirectNegativeCacheHit();
+    }
+
+    @Test
+    void getOriginalUrlCachesKnownMissingResultAfterDatabaseMiss() {
+        when(shortUrlCacheService.lookup("missing123")).thenReturn(ShortUrlCacheLookupResult.miss());
+        when(urlMappingRepo.findByShortUrl("missing123")).thenReturn(null);
+
+        UrlMapping result = urlMappingService.getOriginalUrl("missing123");
+
+        assertEquals(null, result);
+        verify(appMetricsService).recordRedirectCacheMiss();
+        verify(appMetricsService).recordRedirectDatabaseLookup(false);
+        verify(shortUrlCacheService).putMissing("missing123");
     }
 
     @Test

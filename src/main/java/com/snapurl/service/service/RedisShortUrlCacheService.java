@@ -20,30 +20,38 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
 
     private static final String REDIRECT_CACHE_PREFIX = "snapurl:redirect:";
     private static final String VALUE_SEPARATOR = "|";
+    private static final String MISSING_MARKER = "__missing__";
 
     private final StringRedisTemplate redisTemplate;
     private final Duration cacheTtl;
+    private final Duration missingCacheTtl;
 
     public RedisShortUrlCacheService(
             StringRedisTemplate redisTemplate,
-            @Value("${snapurl.redis.redirect-cache-ttl-minutes:60}") long ttlMinutes
+            @Value("${snapurl.redis.redirect-cache-ttl-minutes:60}") long ttlMinutes,
+            @Value("${snapurl.redis.redirect-miss-cache-seconds:30}") long missingTtlSeconds
     ) {
         this.redisTemplate = redisTemplate;
         this.cacheTtl = Duration.ofMinutes(ttlMinutes);
+        this.missingCacheTtl = Duration.ofSeconds(missingTtlSeconds);
     }
 
     @Override
-    public UrlMapping get(String shortUrl) {
+    public ShortUrlCacheLookupResult lookup(String shortUrl) {
         String cachedValue = redisTemplate.opsForValue().get(cacheKey(shortUrl));
         if (cachedValue == null || cachedValue.isBlank()) {
-            return null;
+            return ShortUrlCacheLookupResult.miss();
+        }
+
+        if (MISSING_MARKER.equals(cachedValue)) {
+            return ShortUrlCacheLookupResult.knownMissing();
         }
 
         try {
             String[] parts = cachedValue.split("\\|", 4);
             if (parts.length < 3) {
                 redisTemplate.delete(cacheKey(shortUrl));
-                return null;
+                return ShortUrlCacheLookupResult.miss();
             }
 
             UrlMapping urlMapping = new UrlMapping();
@@ -53,11 +61,11 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
             if (parts.length == 4 && !parts[3].isBlank()) {
                 urlMapping.setExpiresAt(LocalDateTime.parse(parts[3]));
             }
-            return urlMapping;
+            return ShortUrlCacheLookupResult.hit(urlMapping);
         } catch (RuntimeException ex) {
             log.warn("Failed to deserialize redirect cache for shortUrl={}", shortUrl, ex);
             redisTemplate.delete(cacheKey(shortUrl));
-            return null;
+            return ShortUrlCacheLookupResult.miss();
         }
     }
 
@@ -71,6 +79,15 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
             );
         } catch (RuntimeException ex) {
             log.warn("Failed to write redirect cache for shortUrl={}", urlMapping.getShortUrl(), ex);
+        }
+    }
+
+    @Override
+    public void putMissing(String shortUrl) {
+        try {
+            redisTemplate.opsForValue().set(cacheKey(shortUrl), MISSING_MARKER, missingCacheTtl);
+        } catch (RuntimeException ex) {
+            log.warn("Failed to write missing redirect cache for shortUrl={}", shortUrl, ex);
         }
     }
 
