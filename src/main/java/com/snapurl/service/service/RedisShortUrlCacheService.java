@@ -25,20 +25,30 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
     private final StringRedisTemplate redisTemplate;
     private final Duration cacheTtl;
     private final Duration missingCacheTtl;
+    private final AppMetricsService appMetricsService;
 
     public RedisShortUrlCacheService(
             StringRedisTemplate redisTemplate,
+            AppMetricsService appMetricsService,
             @Value("${snapurl.redis.redirect-cache-ttl-minutes:60}") long ttlMinutes,
             @Value("${snapurl.redis.redirect-miss-cache-seconds:30}") long missingTtlSeconds
     ) {
         this.redisTemplate = redisTemplate;
+        this.appMetricsService = appMetricsService;
         this.cacheTtl = Duration.ofMinutes(ttlMinutes);
         this.missingCacheTtl = Duration.ofSeconds(missingTtlSeconds);
     }
 
     @Override
     public ShortUrlCacheLookupResult lookup(String shortUrl) {
-        String cachedValue = redisTemplate.opsForValue().get(cacheKey(shortUrl));
+        String cachedValue;
+        try {
+            cachedValue = redisTemplate.opsForValue().get(cacheKey(shortUrl));
+        } catch (RuntimeException ex) {
+            log.warn("Redirect cache lookup failed for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("redirect_cache", "lookup");
+            return ShortUrlCacheLookupResult.miss();
+        }
         if (cachedValue == null || cachedValue.isBlank()) {
             return ShortUrlCacheLookupResult.miss();
         }
@@ -64,6 +74,7 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
             return ShortUrlCacheLookupResult.hit(urlMapping);
         } catch (RuntimeException ex) {
             log.warn("Failed to deserialize redirect cache for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("redirect_cache", "deserialize");
             redisTemplate.delete(cacheKey(shortUrl));
             return ShortUrlCacheLookupResult.miss();
         }
@@ -79,6 +90,7 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
             );
         } catch (RuntimeException ex) {
             log.warn("Failed to write redirect cache for shortUrl={}", urlMapping.getShortUrl(), ex);
+            appMetricsService.recordRedisFailure("redirect_cache", "write");
         }
     }
 
@@ -88,12 +100,18 @@ public class RedisShortUrlCacheService implements ShortUrlCacheService {
             redisTemplate.opsForValue().set(cacheKey(shortUrl), MISSING_MARKER, missingCacheTtl);
         } catch (RuntimeException ex) {
             log.warn("Failed to write missing redirect cache for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("redirect_cache", "write_missing");
         }
     }
 
     @Override
     public void evict(String shortUrl) {
-        redisTemplate.delete(cacheKey(shortUrl));
+        try {
+            redisTemplate.delete(cacheKey(shortUrl));
+        } catch (RuntimeException ex) {
+            log.warn("Failed to evict redirect cache for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("redirect_cache", "evict");
+        }
     }
 
     private String cacheKey(String shortUrl) {

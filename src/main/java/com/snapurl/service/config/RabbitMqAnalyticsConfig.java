@@ -70,12 +70,15 @@ public class RabbitMqAnalyticsConfig {
             SimpleRabbitListenerContainerFactoryConfigurer configurer,
             ConnectionFactory connectionFactory,
             MessageConverter rabbitMessageConverter,
-            StatelessRetryOperationsInterceptor clickAnalyticsRetryInterceptor
+            StatelessRetryOperationsInterceptor clickAnalyticsRetryInterceptor,
+            @Value("${snapurl.rabbitmq.listener-recovery-interval-ms:5000}") long recoveryIntervalMs
     ) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         configurer.configure(factory, connectionFactory);
         factory.setMessageConverter(rabbitMessageConverter);
         factory.setDefaultRequeueRejected(false);
+        factory.setMissingQueuesFatal(false);
+        factory.setRecoveryInterval(recoveryIntervalMs);
         factory.setAdviceChain(clickAnalyticsRetryInterceptor);
         return factory;
     }

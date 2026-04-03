@@ -5,7 +5,11 @@ import com.snapurl.service.service.AccountLockedException;
 import com.snapurl.service.service.RateLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +25,12 @@ import java.time.format.DateTimeParseException;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    private final com.snapurl.service.service.AppMetricsService appMetricsService;
+
+    public GlobalExceptionHandler(com.snapurl.service.service.AppMetricsService appMetricsService) {
+        this.appMetricsService = appMetricsService;
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequest(IllegalArgumentException ex, HttpServletRequest request) {
@@ -44,6 +54,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleDataConflict(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Data integrity conflict on path={}", request.getRequestURI(), ex);
         return buildResponse(HttpStatus.CONFLICT, "That email or username is already in use.", request.getRequestURI());
+    }
+
+    @ExceptionHandler({
+            CannotGetJdbcConnectionException.class,
+            DataAccessResourceFailureException.class,
+            QueryTimeoutException.class,
+            CannotAcquireLockException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleDatabaseUnavailable(RuntimeException ex, HttpServletRequest request) {
+        log.error("Database unavailable on path={}", request.getRequestURI(), ex);
+        appMetricsService.recordDatabaseUnavailable("request");
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                "The service is temporarily unavailable. Please try again shortly.",
+                request.getRequestURI());
     }
 
     @ExceptionHandler(DateTimeParseException.class)

@@ -9,12 +9,15 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,12 +25,14 @@ class GlobalExceptionHandlerTest {
 
     @Mock
     private HttpServletRequest request;
+    @Mock
+    private com.snapurl.service.service.AppMetricsService appMetricsService;
 
     private GlobalExceptionHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new GlobalExceptionHandler();
+        handler = new GlobalExceptionHandler(appMetricsService);
         when(request.getRequestURI()).thenReturn("/api/urls/public/shorten");
     }
 
@@ -91,5 +96,18 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("That email or username is already in use.", response.getBody().getMessage());
         assertEquals("Conflict", response.getBody().getError());
+    }
+
+    @Test
+    void handleDatabaseUnavailableReturns503() {
+        var response = handler.handleDatabaseUnavailable(
+                new CannotGetJdbcConnectionException("db down"),
+                request
+        );
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertEquals("The service is temporarily unavailable. Please try again shortly.", response.getBody().getMessage());
+        assertEquals("Service Unavailable", response.getBody().getError());
+        verify(appMetricsService).recordDatabaseUnavailable("request");
     }
 }

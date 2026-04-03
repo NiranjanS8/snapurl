@@ -26,18 +26,28 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
 
     private final StringRedisTemplate redisTemplate;
     private final Duration cacheTtl;
+    private final AppMetricsService appMetricsService;
 
     public RedisAnalyticsCacheService(
             StringRedisTemplate redisTemplate,
+            AppMetricsService appMetricsService,
             @Value("${snapurl.redis.analytics-cache-ttl-seconds:60}") long ttlSeconds
     ) {
         this.redisTemplate = redisTemplate;
+        this.appMetricsService = appMetricsService;
         this.cacheTtl = Duration.ofSeconds(ttlSeconds);
     }
 
     @Override
     public List<ClickEventDTO> getUrlAnalytics(String shortUrl, LocalDateTime start, LocalDateTime end) {
-        String raw = redisTemplate.opsForValue().get(urlAnalyticsKey(shortUrl, start, end));
+        String raw;
+        try {
+            raw = redisTemplate.opsForValue().get(urlAnalyticsKey(shortUrl, start, end));
+        } catch (RuntimeException ex) {
+            log.warn("Analytics cache lookup failed for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "lookup_url");
+            return null;
+        }
         if (raw == null || raw.isBlank()) {
             return null;
         }
@@ -60,6 +70,7 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
             return items;
         } catch (RuntimeException ex) {
             log.warn("Failed to deserialize cached url analytics for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "deserialize_url");
             redisTemplate.delete(urlAnalyticsKey(shortUrl, start, end));
             return null;
         }
@@ -78,12 +89,20 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
             redisTemplate.opsForValue().set(urlAnalyticsKey(shortUrl, start, end), value.toString(), cacheTtl);
         } catch (RuntimeException ex) {
             log.warn("Failed to cache url analytics for shortUrl={}", shortUrl, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "write_url");
         }
     }
 
     @Override
     public Map<LocalDate, Long> getTotalClicks(Long userId, LocalDate start, LocalDate end) {
-        String raw = redisTemplate.opsForValue().get(totalClicksKey(userId, start, end));
+        String raw;
+        try {
+            raw = redisTemplate.opsForValue().get(totalClicksKey(userId, start, end));
+        } catch (RuntimeException ex) {
+            log.warn("Analytics cache lookup failed for userId={}", userId, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "lookup_total");
+            return null;
+        }
         if (raw == null || raw.isBlank()) {
             return null;
         }
@@ -103,6 +122,7 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
             return result;
         } catch (RuntimeException ex) {
             log.warn("Failed to deserialize cached total clicks for userId={}", userId, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "deserialize_total");
             redisTemplate.delete(totalClicksKey(userId, start, end));
             return null;
         }
@@ -121,6 +141,7 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
             redisTemplate.opsForValue().set(totalClicksKey(userId, start, end), value.toString(), cacheTtl);
         } catch (RuntimeException ex) {
             log.warn("Failed to cache total clicks for userId={}", userId, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "write_total");
         }
     }
 
@@ -135,9 +156,14 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
     }
 
     private void deleteByPattern(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Failed to evict analytics cache by pattern={}", pattern, ex);
+            appMetricsService.recordRedisFailure("analytics_cache", "evict");
         }
     }
 

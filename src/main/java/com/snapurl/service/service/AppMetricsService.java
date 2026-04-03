@@ -60,6 +60,18 @@ public class AppMetricsService {
         meterRegistry.counter("snapurl.analytics.events.duplicates_skipped").increment();
     }
 
+    public void recordRedisFailure(String component, String operation) {
+        meterRegistry.counter("snapurl.redis.failures", "component", component, "operation", operation).increment();
+    }
+
+    public void recordRateLimitFallback(boolean failOpen) {
+        meterRegistry.counter("snapurl.rate.limit.fallbacks", "mode", failOpen ? "fail_open" : "fail_closed").increment();
+    }
+
+    public void recordDatabaseUnavailable(String operation) {
+        meterRegistry.counter("snapurl.database.unavailable", "operation", operation).increment();
+    }
+
     public void recordLoginFailure() {
         meterRegistry.counter("snapurl.login.failures").increment();
     }
