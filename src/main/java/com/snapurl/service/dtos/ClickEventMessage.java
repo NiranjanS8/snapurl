@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClickEventMessage {
+    private String eventId;
     private Long urlMappingId;
     private Long userId;
     private String shortUrl;

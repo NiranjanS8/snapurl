@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -20,6 +21,7 @@ public class DirectClickAnalyticsDispatcher implements ClickAnalyticsDispatcher 
     @Async
     public void dispatchClick(UrlMapping urlMapping) {
         clickAnalyticsProcessor.processClick(new ClickEventMessage(
+                UUID.randomUUID().toString(),
                 urlMapping.getId(),
                 urlMapping.getUser() != null ? urlMapping.getUser().getId() : null,
                 urlMapping.getShortUrl(),

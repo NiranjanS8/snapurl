@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -40,6 +41,7 @@ public class RabbitClickAnalyticsDispatcher implements ClickAnalyticsDispatcher 
     @Async
     public void dispatchClick(UrlMapping urlMapping) {
         ClickEventMessage message = new ClickEventMessage(
+                UUID.randomUUID().toString(),
                 urlMapping.getId(),
                 urlMapping.getUser() != null ? urlMapping.getUser().getId() : null,
                 urlMapping.getShortUrl(),

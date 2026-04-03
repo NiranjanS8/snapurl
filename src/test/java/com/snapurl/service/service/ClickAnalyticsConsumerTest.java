@@ -28,7 +28,7 @@ class ClickAnalyticsConsumerTest {
 
     @Test
     void consumeRecordsFailureMetricAndRethrowsWhenProcessingFails() {
-        ClickEventMessage message = new ClickEventMessage(1L, 2L, "abc123", LocalDateTime.now());
+        ClickEventMessage message = new ClickEventMessage("evt-1", 1L, 2L, "abc123", LocalDateTime.now());
         RuntimeException failure = new RuntimeException("boom");
         doThrow(failure).when(clickAnalyticsProcessor).processClick(message);
 
@@ -40,7 +40,7 @@ class ClickAnalyticsConsumerTest {
 
     @Test
     void consumeDeadLetterRecordsMetric() {
-        ClickEventMessage message = new ClickEventMessage(1L, 2L, "abc123", LocalDateTime.now());
+        ClickEventMessage message = new ClickEventMessage("evt-1", 1L, 2L, "abc123", LocalDateTime.now());
         Message rawMessage = new Message(new byte[0], new MessageProperties());
 
         clickAnalyticsConsumer.consumeDeadLetter(message, rawMessage);

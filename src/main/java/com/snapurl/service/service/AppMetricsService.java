@@ -56,6 +56,10 @@ public class AppMetricsService {
         meterRegistry.counter("snapurl.analytics.events.dead_lettered").increment();
     }
 
+    public void recordAnalyticsDuplicateSkipped() {
+        meterRegistry.counter("snapurl.analytics.events.duplicates_skipped").increment();
+    }
+
     public void recordLoginFailure() {
         meterRegistry.counter("snapurl.login.failures").increment();
     }
