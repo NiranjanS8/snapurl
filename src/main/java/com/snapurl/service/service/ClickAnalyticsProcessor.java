@@ -18,6 +18,7 @@ public class ClickAnalyticsProcessor {
     private final UrlMappingRepo urlMappingRepo;
     private final ClickEventRepo clickEventRepo;
     private final AnalyticsCacheService analyticsCacheService;
+    private final AppMetricsService appMetricsService;
 
     @Transactional
     public void processClick(ClickEventMessage message) {
@@ -40,6 +41,7 @@ public class ClickAnalyticsProcessor {
         if (message.getUserId() != null) {
             analyticsCacheService.evictForUser(message.getUserId());
         }
+        appMetricsService.recordAnalyticsProcessed();
         log.info("Analytics event processed for shortUrl={} userId={}", message.getShortUrl(), message.getUserId());
     }
 }

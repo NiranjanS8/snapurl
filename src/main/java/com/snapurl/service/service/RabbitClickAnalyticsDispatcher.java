@@ -18,17 +18,20 @@ public class RabbitClickAnalyticsDispatcher implements ClickAnalyticsDispatcher 
 
     private final RabbitTemplate rabbitTemplate;
     private final ClickAnalyticsProcessor clickAnalyticsProcessor;
+    private final AppMetricsService appMetricsService;
     private final String exchangeName;
     private final String routingKey;
 
     public RabbitClickAnalyticsDispatcher(
             RabbitTemplate rabbitTemplate,
             ClickAnalyticsProcessor clickAnalyticsProcessor,
+            AppMetricsService appMetricsService,
             @Value("${snapurl.rabbitmq.analytics-exchange}") String exchangeName,
             @Value("${snapurl.rabbitmq.click-routing-key}") String routingKey
     ) {
         this.rabbitTemplate = rabbitTemplate;
         this.clickAnalyticsProcessor = clickAnalyticsProcessor;
+        this.appMetricsService = appMetricsService;
         this.exchangeName = exchangeName;
         this.routingKey = routingKey;
     }
@@ -45,7 +48,9 @@ public class RabbitClickAnalyticsDispatcher implements ClickAnalyticsDispatcher 
 
         try {
             rabbitTemplate.convertAndSend(exchangeName, routingKey, message);
+            appMetricsService.recordAnalyticsPublished();
         } catch (RuntimeException ex) {
+            appMetricsService.recordAnalyticsPublishFallback();
             log.warn("RabbitMQ publish failed for shortUrl={}, falling back to direct processing", urlMapping.getShortUrl(), ex);
             clickAnalyticsProcessor.processClick(message);
         }

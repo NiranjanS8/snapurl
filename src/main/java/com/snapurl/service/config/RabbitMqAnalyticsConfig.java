@@ -5,10 +5,16 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
+import org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptor;
+import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.amqp.autoconfigure.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -42,5 +48,35 @@ public class RabbitMqAnalyticsConfig {
     @Bean
     public MessageConverter rabbitMessageConverter() {
         return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
+    public StatelessRetryOperationsInterceptor clickAnalyticsRetryInterceptor(
+            @Value("${snapurl.rabbitmq.listener-max-attempts:3}") int maxAttempts,
+            @Value("${snapurl.rabbitmq.listener-initial-interval-ms:1000}") long initialInterval,
+            @Value("${snapurl.rabbitmq.listener-multiplier:2.0}") double multiplier,
+            @Value("${snapurl.rabbitmq.listener-max-interval-ms:5000}") long maxInterval
+    ) {
+        return RetryInterceptorBuilder
+                .stateless()
+                .maxRetries(maxAttempts)
+                .backOffOptions(initialInterval, multiplier, maxInterval)
+                .recoverer(new RejectAndDontRequeueRecoverer())
+                .build();
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer,
+            ConnectionFactory connectionFactory,
+            MessageConverter rabbitMessageConverter,
+            StatelessRetryOperationsInterceptor clickAnalyticsRetryInterceptor
+    ) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        configurer.configure(factory, connectionFactory);
+        factory.setMessageConverter(rabbitMessageConverter);
+        factory.setDefaultRequeueRejected(false);
+        factory.setAdviceChain(clickAnalyticsRetryInterceptor);
+        return factory;
     }
 }

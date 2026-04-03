@@ -36,6 +36,26 @@ public class AppMetricsService {
         meterRegistry.counter("snapurl.redirect.db.lookups", "result", found ? "found" : "not_found").increment();
     }
 
+    public void recordAnalyticsPublished() {
+        meterRegistry.counter("snapurl.analytics.events.published").increment();
+    }
+
+    public void recordAnalyticsPublishFallback() {
+        meterRegistry.counter("snapurl.analytics.events.publish_fallback").increment();
+    }
+
+    public void recordAnalyticsProcessed() {
+        meterRegistry.counter("snapurl.analytics.events.processed").increment();
+    }
+
+    public void recordAnalyticsProcessingFailure() {
+        meterRegistry.counter("snapurl.analytics.events.processing_failures").increment();
+    }
+
+    public void recordAnalyticsDeadLettered() {
+        meterRegistry.counter("snapurl.analytics.events.dead_lettered").increment();
+    }
+
     public void recordLoginFailure() {
         meterRegistry.counter("snapurl.login.failures").increment();
     }
