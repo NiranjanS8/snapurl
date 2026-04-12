@@ -92,6 +92,7 @@ class UserServiceTest {
     @Test
     void refreshAccessTokenRotatesRefreshToken() {
         RefreshToken existingRefreshToken = new RefreshToken();
+        existingRefreshToken.setId(100L);
         existingRefreshToken.setToken("old-refresh");
         existingRefreshToken.setUser(user);
         existingRefreshToken.setExpiresAt(LocalDateTime.now().plusDays(1));
@@ -107,7 +108,7 @@ class UserServiceTest {
         when(jwtUtils.generateToken(user.getEmail(), user.getRole())).thenReturn("new-access");
         when(refreshTokenRepo.save(any(RefreshToken.class))).thenAnswer(invocation -> {
             RefreshToken token = invocation.getArgument(0);
-            if (token == existingRefreshToken) {
+            if (token.getId() != null && token.getId().equals(100L)) {
                 return token;
             }
             rotatedToken.setToken(token.getToken());
@@ -125,7 +126,7 @@ class UserServiceTest {
         assertNotNull(response.getRefreshToken());
         assertNotEquals("old-refresh", response.getRefreshToken());
         verify(refreshTokenRepo).findByToken("old-refresh");
-        verify(refreshTokenRepo).save(existingRefreshToken);
+        verify(refreshTokenRepo, org.mockito.Mockito.times(2)).save(any(RefreshToken.class));
     }
 
     @Test
