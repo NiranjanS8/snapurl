@@ -1,9 +1,13 @@
 package com.snapurl.service.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,13 +26,16 @@ import java.util.List;
                 @Index(name = "idx_url_mapping_original_url", columnList = "originalUrl")
         }
 )
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @AllArgsConstructor
 @NoArgsConstructor
 public class UrlMapping {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
     private String originalUrl;
     @Column(nullable = false, unique = true, length = 32)
@@ -40,8 +47,11 @@ public class UrlMapping {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @ToString.Exclude
     private  Users user;
 
     @OneToMany(mappedBy = "urlMapping")
+    @ToString.Exclude
+    @JsonIgnore
     private List<ClickEvent> clickEvents;
 }
