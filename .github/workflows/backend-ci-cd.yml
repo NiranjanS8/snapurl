@@ -105,10 +105,17 @@ jobs:
             mkdir -p "$APP_DIR/monitoring/grafana/provisioning/dashboards"
             mkdir -p "$APP_DIR/monitoring/grafana/dashboards"
 
+            # Save current commit for rollback
+            PREVIOUS_COMMIT=$(git rev-parse HEAD)
+            echo "Current commit (rollback target): $PREVIOUS_COMMIT"
+
             echo "Deploying branch: $BRANCH"
             git fetch origin "$BRANCH"
             git checkout "$BRANCH"
             git pull --ff-only origin "$BRANCH"
+
+            NEW_COMMIT=$(git rev-parse HEAD)
+            echo "Deploying commit: $NEW_COMMIT"
 
             echo "Rebuilding and restarting backend stack"
             docker compose -f docker-compose.aws.yml --env-file .env.aws up -d --build
@@ -117,16 +124,47 @@ jobs:
             docker compose -f docker-compose.aws.yml ps
 
             echo "Waiting for backend health check"
+            HEALTHY=false
             for attempt in $(seq 1 18); do
               if curl --silent --fail http://127.0.0.1:9090/api/health >/dev/null; then
-                echo "Backend health check passed"
-                exit 0
+                echo "Backend health check passed on commit $NEW_COMMIT"
+                HEALTHY=true
+                break
               fi
-
               echo "Health check not ready yet (attempt $attempt/18)"
               sleep 5
             done
 
-            echo "Backend health check failed"
+            if [ "$HEALTHY" = true ]; then
+              exit 0
+            fi
+
+            # ---- ROLLBACK ----
+            echo "Health check FAILED for commit $NEW_COMMIT"
+            docker compose -f docker-compose.aws.yml --env-file .env.aws logs app --tail 100
+
+            if [ "$PREVIOUS_COMMIT" = "$NEW_COMMIT" ]; then
+              echo "No previous commit to roll back to. Exiting."
+              exit 1
+            fi
+
+            echo "Rolling back to $PREVIOUS_COMMIT"
+            git checkout "$PREVIOUS_COMMIT"
+
+            echo "Rebuilding previous version"
+            docker compose -f docker-compose.aws.yml --env-file .env.aws up -d --build
+
+            echo "Waiting for rollback health check"
+            for attempt in $(seq 1 18); do
+              if curl --silent --fail http://127.0.0.1:9090/api/health >/dev/null; then
+                echo "Rollback health check passed. Stable on $PREVIOUS_COMMIT"
+                echo "DEPLOY FAILED — rolled back successfully."
+                exit 1
+              fi
+              echo "Rollback health check not ready yet (attempt $attempt/18)"
+              sleep 5
+            done
+
+            echo "CRITICAL: Rollback also failed. Manual intervention required."
             docker compose -f docker-compose.aws.yml --env-file .env.aws logs app --tail 100
             exit 1
