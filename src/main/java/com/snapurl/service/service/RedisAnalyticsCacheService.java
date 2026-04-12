@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @Service
@@ -157,9 +156,22 @@ public class RedisAnalyticsCacheService implements AnalyticsCacheService {
 
     private void deleteByPattern(String pattern) {
         try {
-            Set<String> keys = redisTemplate.keys(pattern);
-            if (keys != null && !keys.isEmpty()) {
-                redisTemplate.delete(keys);
+            var scanOptions = org.springframework.data.redis.core.ScanOptions.scanOptions()
+                    .match(pattern)
+                    .count(100)
+                    .build();
+            try (var cursor = redisTemplate.scan(scanOptions)) {
+                List<String> batch = new ArrayList<>();
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 100) {
+                        redisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    redisTemplate.delete(batch);
+                }
             }
         } catch (RuntimeException ex) {
             log.warn("Failed to evict analytics cache by pattern={}", pattern, ex);

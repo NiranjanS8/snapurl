@@ -55,7 +55,7 @@ public class UrlMappingService {
             throw new IllegalArgumentException(INVALID_URL_MESSAGE);
         }
 
-        String normalizedOriginalUrl = originalUrl.trim();
+        String normalizedOriginalUrl = normalizeOriginalUrl(originalUrl);
         String normalizedAlias = normalizeAlias(customAlias);
         if (normalizedAlias != null) {
             validateCustomAlias(normalizedAlias);
@@ -188,6 +188,14 @@ public class UrlMappingService {
         }
     }
 
+    private String normalizeOriginalUrl(String originalUrl) {
+        String trimmed = originalUrl.trim();
+        if (!trimmed.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*$")) {
+            return "https://" + trimmed;
+        }
+        return trimmed;
+    }
+
     private boolean hasNonNumericTopPrivateLabel(String host) {
         String[] labels = host.split("\\.");
         if (labels.length < 2) {
@@ -267,7 +275,12 @@ public class UrlMappingService {
         ShortUrlCacheLookupResult cacheLookupResult = shortUrlCacheService.lookup(shortUrl);
         if (cacheLookupResult.isHit()) {
             appMetricsService.recordRedirectCacheHit();
-            return cacheLookupResult.getUrlMapping();
+            UrlMapping cached = cacheLookupResult.getUrlMapping();
+            if (isExpired(cached)) {
+                log.debug("Cached redirect is expired for shortUrl={}", shortUrl);
+                return null;
+            }
+            return cached;
         }
 
         if (cacheLookupResult.isKnownMissing()) {
@@ -279,6 +292,10 @@ public class UrlMappingService {
         UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
         appMetricsService.recordRedirectDatabaseLookup(urlMapping != null);
         if (urlMapping != null) {
+            if (isExpired(urlMapping)) {
+                log.debug("Database redirect is expired for shortUrl={}", shortUrl);
+                return null;
+            }
             shortUrlCacheService.put(urlMapping);
             log.debug("Redirect cache populated from database for shortUrl={}", shortUrl);
         } else {
