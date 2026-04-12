@@ -31,7 +31,8 @@ public class RedirectController {
             log.info("Redirect resolved for shortUrl={}", shortUrl);
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", urlMapping.getOriginalUrl());
-            return ResponseEntity.status(302).headers(headers).build();
+            headers.add("Cache-Control", "public, max-age=86400");
+            return ResponseEntity.status(301).headers(headers).build();
         } else {
             log.warn("Redirect target not found for shortUrl={}", shortUrl);
             return ResponseEntity.notFound().build();

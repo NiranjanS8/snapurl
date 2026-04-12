@@ -60,10 +60,14 @@ public class UrlMappingRepoImpl implements UrlMappingRepoCustom {
         predicates.add(cb.equal(root.get("user"), user));
 
         if (query != null && !query.isBlank()) {
-            String pattern = "%" + query.trim().toLowerCase(Locale.ROOT) + "%";
+            String escaped = query.trim().toLowerCase(Locale.ROOT)
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
+            String pattern = "%" + escaped + "%";
             predicates.add(cb.or(
-                    cb.like(cb.lower(root.<String>get("shortUrl")), pattern),
-                    cb.like(cb.lower(root.<String>get("originalUrl")), pattern)
+                    cb.like(cb.lower(root.<String>get("shortUrl")), pattern, '\\'),
+                    cb.like(cb.lower(root.<String>get("originalUrl")), pattern, '\\')
             ));
         }
 
