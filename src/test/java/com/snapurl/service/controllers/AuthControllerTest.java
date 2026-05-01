@@ -14,6 +14,7 @@ import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.verify;
@@ -41,6 +43,8 @@ class AuthControllerTest {
     private AppMetricsService appMetricsService;
     @Mock
     private HttpServletRequest httpServletRequest;
+    @Mock
+    private HttpServletResponse httpServletResponse;
 
     private AuthController controller;
 
@@ -53,6 +57,10 @@ class AuthControllerTest {
         ReflectionTestUtils.setField(controller, "forgotPasswordPerHour", 4L);
         ReflectionTestUtils.setField(controller, "resetPasswordPerHour", 6L);
         ReflectionTestUtils.setField(controller, "trustForwardedHeader", false);
+        ReflectionTestUtils.setField(controller, "refreshTokenExpirationMs", 604800000L);
+        ReflectionTestUtils.setField(controller, "refreshCookieName", "SNAPURL_REFRESH_TOKEN");
+        ReflectionTestUtils.setField(controller, "refreshCookieSecure", false);
+        ReflectionTestUtils.setField(controller, "refreshCookieSameSite", "Lax");
     }
 
     @Test
@@ -67,7 +75,7 @@ class AuthControllerTest {
 
         RateLimitExceededException exception = assertThrows(
                 RateLimitExceededException.class,
-                () -> controller.loginUser(loginRequest, httpServletRequest)
+                () -> controller.loginUser(loginRequest, httpServletRequest, httpServletResponse)
         );
 
         assertEquals("Too many login attempts. Please try again later.", exception.getMessage());
@@ -111,12 +119,16 @@ class AuthControllerTest {
                 .thenReturn(new RateLimitResult(true, 5, 2, 3, 0));
         when(userService.loginUser(loginRequest)).thenReturn(authResponse);
 
-        var response = controller.loginUser(loginRequest, httpServletRequest);
+        var response = controller.loginUser(loginRequest, httpServletRequest, httpServletResponse);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("5", response.getHeaders().getFirst("X-RateLimit-Limit"));
         assertEquals("3", response.getHeaders().getFirst("X-RateLimit-Remaining"));
-        assertEquals(authResponse, response.getBody());
+        JwtAuthenticationResponse body = (JwtAuthenticationResponse) response.getBody();
+        assertEquals("access", body.getAccessToken());
+        assertEquals(null, body.getRefreshToken());
+        verify(httpServletResponse).addHeader(eq("Set-Cookie"), contains("SNAPURL_REFRESH_TOKEN=refresh"));
+        verify(httpServletResponse).addHeader(eq("Set-Cookie"), contains("HttpOnly"));
     }
 
     @Test
@@ -130,10 +142,13 @@ class AuthControllerTest {
                 .thenReturn(new RateLimitResult(true, 10, 1, 9, 0));
         when(userService.refreshAccessToken(refreshTokenRequest)).thenReturn(authResponse);
 
-        var response = controller.refreshToken(refreshTokenRequest, httpServletRequest);
+        var response = controller.refreshToken(refreshTokenRequest, httpServletRequest, httpServletResponse);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(authResponse, response.getBody());
+        JwtAuthenticationResponse body = (JwtAuthenticationResponse) response.getBody();
+        assertEquals("new-access", body.getAccessToken());
+        assertEquals(null, body.getRefreshToken());
+        verify(httpServletResponse).addHeader(eq("Set-Cookie"), contains("SNAPURL_REFRESH_TOKEN=new-refresh"));
     }
 
     @Test

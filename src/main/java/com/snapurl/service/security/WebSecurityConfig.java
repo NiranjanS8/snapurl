@@ -32,6 +32,10 @@ public class WebSecurityConfig {
     private final UserDetailsService userDetailsService;
     @Value("${snapurl.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
     private String allowedOrigins;
+    @Value("${snapurl.security.public-docs-enabled:false}")
+    private boolean publicDocsEnabled;
+    @Value("${snapurl.security.public-prometheus-enabled:false}")
+    private boolean publicPrometheusEnabled;
 
     public WebSecurityConfig(UserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
@@ -65,17 +69,22 @@ public class WebSecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
-                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/health").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/urls/public/**").permitAll()
-                        .requestMatchers("/api/urls/**").authenticated()
-                        .requestMatchers("/{shortUrl}").permitAll()
-                        .anyRequest().authenticated()
-                );
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    auth.requestMatchers("/actuator/health").permitAll();
+                    if (publicPrometheusEnabled) {
+                        auth.requestMatchers("/actuator/prometheus").permitAll();
+                    }
+                    if (publicDocsEnabled) {
+                        auth.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
+                    }
+                    auth.requestMatchers("/api/health").permitAll();
+                    auth.requestMatchers("/api/auth/**").permitAll();
+                    auth.requestMatchers("/api/urls/public/**").permitAll();
+                    auth.requestMatchers("/api/urls/**").authenticated();
+                    auth.requestMatchers("/{shortUrl}").permitAll();
+                    auth.anyRequest().authenticated();
+                });
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

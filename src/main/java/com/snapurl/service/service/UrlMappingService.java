@@ -11,6 +11,7 @@ import com.snapurl.service.repositories.UrlMappingRepo;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +19,11 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -49,6 +52,7 @@ public class UrlMappingService {
     private ShortUrlCacheService shortUrlCacheService;
     private AnalyticsCacheService analyticsCacheService;
     private AppMetricsService appMetricsService;
+    private Environment environment;
 
     public UrlMappingDTO createShortUrl(String originalUrl, String customAlias, Users user) {
         if (!isValidUrl(originalUrl)) {
@@ -180,9 +184,11 @@ public class UrlMappingService {
             String host = uri.getHost();
             return host != null
                     && !host.isBlank()
+                    && uri.getUserInfo() == null
                     && host.matches(HOSTNAME_PATTERN)
                     && hasNonNumericTopPrivateLabel(host)
-                    && InternetDomainName.from(host).hasPublicSuffix();
+                    && InternetDomainName.from(host).hasPublicSuffix()
+                    && !isBlockedDomain(host);
         } catch (IllegalArgumentException ex) {
             return false;
         }
@@ -204,6 +210,18 @@ public class UrlMappingService {
 
         String topPrivateLabel = labels[labels.length - 2];
         return topPrivateLabel.chars().anyMatch(ch -> !Character.isDigit(ch));
+    }
+
+    private boolean isBlockedDomain(String host) {
+        String normalizedHost = host.toLowerCase(Locale.ROOT);
+        String blockedDomains = environment != null
+                ? environment.getProperty("snapurl.security.blocked-url-domains", "")
+                : "";
+        return Arrays.stream(blockedDomains.split(","))
+                .map(String::trim)
+                .filter(domain -> !domain.isBlank())
+                .map(domain -> domain.toLowerCase(Locale.ROOT))
+                .anyMatch(domain -> normalizedHost.equals(domain) || normalizedHost.endsWith("." + domain));
     }
 
     public List<UrlMappingDTO> getUrlsByUser(Users user) {

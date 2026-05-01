@@ -7,6 +7,7 @@ import com.snapurl.service.dtos.RefreshTokenRequest;
 import com.snapurl.service.dtos.RegisterRequest;
 import com.snapurl.service.dtos.ResetPasswordRequest;
 import com.snapurl.service.models.Users;
+import com.snapurl.service.security.JwtAuthenticationResponse;
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
@@ -14,10 +15,13 @@ import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +50,14 @@ public class AuthController {
     private long resetPasswordPerHour;
     @Value("${snapurl.rate-limit.trust-forwarded-header:false}")
     private boolean trustForwardedHeader;
+    @Value("${jwt.refresh-expiration}")
+    private long refreshTokenExpirationMs;
+    @Value("${snapurl.auth.refresh-cookie-name:SNAPURL_REFRESH_TOKEN}")
+    private String refreshCookieName;
+    @Value("${snapurl.auth.refresh-cookie-secure:false}")
+    private boolean refreshCookieSecure;
+    @Value("${snapurl.auth.refresh-cookie-same-site:Lax}")
+    private String refreshCookieSameSite;
 
     public AuthController(UserService userService, RateLimitService rateLimitService, AppMetricsService appMetricsService) {
         this.userService = userService;
@@ -78,7 +90,7 @@ public class AuthController {
     }
 
     @PostMapping("/public/login")
-    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request, HttpServletResponse response) {
         String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:login:" + clientIp + ":" + normalizeEmail(loginRequest.getEmail()),
@@ -91,11 +103,15 @@ public class AuthController {
             throw new RateLimitExceededException("Too many login attempts. Please try again later.", rateLimitResult);
         }
         log.info("Login request accepted for email={} ip={}", normalizeEmail(loginRequest.getEmail()), clientIp);
-        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.loginUser(loginRequest));
+        JwtAuthenticationResponse authResponse = userService.loginUser(loginRequest);
+        addRefreshTokenCookie(response, authResponse.getRefreshToken());
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(accessTokenOnly(authResponse));
     }
 
     @PostMapping("/public/refresh")
-    public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest, HttpServletRequest request) {
+    public ResponseEntity<?> refreshToken(@RequestBody(required = false) RefreshTokenRequest refreshTokenRequest,
+                                          HttpServletRequest request,
+                                          HttpServletResponse response) {
         String clientIp = extractClientIp(request);
         RateLimitResult rateLimitResult = rateLimitService.check(
                 "snapurl:rate-limit:refresh:" + clientIp,
@@ -109,7 +125,19 @@ public class AuthController {
         }
 
         log.info("Refresh token request accepted for ip={}", clientIp);
-        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(userService.refreshAccessToken(refreshTokenRequest));
+        RefreshTokenRequest resolvedRequest = refreshTokenRequest != null ? refreshTokenRequest : new RefreshTokenRequest();
+        if (!StringUtils.hasText(resolvedRequest.getRefreshToken())) {
+            resolvedRequest.setRefreshToken(extractRefreshTokenCookie(request));
+        }
+        JwtAuthenticationResponse authResponse = userService.refreshAccessToken(resolvedRequest);
+        addRefreshTokenCookie(response, authResponse.getRefreshToken());
+        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(accessTokenOnly(authResponse));
+    }
+
+    @PostMapping("/public/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        clearRefreshTokenCookie(response);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/public/forgot-password")
@@ -171,5 +199,43 @@ public class AuthController {
 
     private String normalizeEmail(String email) {
         return email == null ? "anonymous" : email.trim().toLowerCase();
+    }
+
+    private JwtAuthenticationResponse accessTokenOnly(JwtAuthenticationResponse authResponse) {
+        return new JwtAuthenticationResponse(authResponse.getAccessToken(), null, authResponse.getTokenType());
+    }
+
+    private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        ResponseCookie cookie = ResponseCookie.from(refreshCookieName, refreshToken)
+                .httpOnly(true)
+                .secure(refreshCookieSecure)
+                .sameSite(refreshCookieSameSite)
+                .path("/api/auth/public")
+                .maxAge(Duration.ofMillis(refreshTokenExpirationMs))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void clearRefreshTokenCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(refreshCookieName, "")
+                .httpOnly(true)
+                .secure(refreshCookieSecure)
+                .sameSite(refreshCookieSameSite)
+                .path("/api/auth/public")
+                .maxAge(Duration.ZERO)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private String extractRefreshTokenCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+        for (var cookie : request.getCookies()) {
+            if (refreshCookieName.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 }

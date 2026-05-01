@@ -1,23 +1,49 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import api, { clearApiAccessToken, setApiAccessToken } from "../api/api";
 
 const ContextApi = createContext();
 
 export const ContextProvider = ({ children }) => {
-    const getToken = localStorage.getItem("JWT_TOKEN")
-        ? JSON.parse(localStorage.getItem("JWT_TOKEN"))
-        : null;
-    const getRefreshToken = localStorage.getItem("JWT_REFRESH_TOKEN")
-        ? JSON.parse(localStorage.getItem("JWT_REFRESH_TOKEN"))
-        : null;
+    const [token, setTokenState] = useState(null);
+    const [authReady, setAuthReady] = useState(false);
 
-    const [token, setToken] = useState(getToken);
-    const [refreshToken, setRefreshToken] = useState(getRefreshToken);
+    const setToken = (nextToken) => {
+        setTokenState(nextToken);
+        if (nextToken) {
+            setApiAccessToken(nextToken);
+        } else {
+            clearApiAccessToken();
+        }
+    };
+
+    useEffect(() => {
+        let mounted = true;
+        api.post("/api/auth/public/refresh")
+            .then(({ data }) => {
+                if (mounted) {
+                    setToken(data.accessToken);
+                }
+            })
+            .catch(() => {
+                if (mounted) {
+                    setToken(null);
+                }
+            })
+            .finally(() => {
+                if (mounted) {
+                    setAuthReady(true);
+                }
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const sendData = {
         token,
         setToken,
-        refreshToken,
-        setRefreshToken,
+        authReady,
     };
 
     return <ContextApi.Provider value={sendData}>{children}</ContextApi.Provider>

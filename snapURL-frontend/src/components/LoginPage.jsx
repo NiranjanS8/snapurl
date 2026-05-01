@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import TextField from './TextField';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/api';
+import api, { setApiAccessToken } from '../api/api';
 import toast from 'react-hot-toast';
 import { useStoreContext } from '../contextApi/ContextApi';
 
@@ -22,7 +22,7 @@ const ALLOWED_EMAIL_DOMAINS = new Set([
 const LoginPage = () => {
     const navigate = useNavigate();
     const [loader, setLoader] = useState(false);
-    const { setToken, setRefreshToken } = useStoreContext();
+    const { setToken } = useStoreContext();
 
     const {
         register,
@@ -61,10 +61,8 @@ const LoginPage = () => {
                     password: data.password,
                 }
             );
+            setApiAccessToken(response.accessToken);
             setToken(response.accessToken);
-            setRefreshToken(response.refreshToken);
-            localStorage.setItem("JWT_TOKEN", JSON.stringify(response.accessToken));
-            localStorage.setItem("JWT_REFRESH_TOKEN", JSON.stringify(response.refreshToken));
             toast.success("Login Successful!");
             reset();
             navigate("/dashboard");

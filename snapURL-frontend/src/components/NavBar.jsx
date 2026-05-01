@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 import { useStoreContext } from "../contextApi/ContextApi";
+import api, { clearApiAccessToken } from "../api/api";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -10,9 +11,14 @@ const Navbar = () => {
   const path = useLocation().pathname;
   const [navbarOpen, setNavbarOpen] = useState(false);
 
-  const onLogOutHandler = () => {
+  const onLogOutHandler = async () => {
+    try {
+      await api.post("/api/auth/public/logout");
+    } catch {
+      // Local logout still clears client auth state if the server is unreachable.
+    }
+    clearApiAccessToken();
     setToken(null);
-    localStorage.removeItem("JWT_TOKEN");
     navigate("/login");
   };
 

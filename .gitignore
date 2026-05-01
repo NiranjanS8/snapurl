@@ -39,3 +39,4 @@ build/
 src/main/resources/application-local.properties
 .m2repo/
 logs/
+graphify-out/
