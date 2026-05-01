@@ -9,6 +9,7 @@ import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.AppMetricsService;
+import com.snapurl.service.service.UrlAnalyticsService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
 import jakarta.validation.Valid;
@@ -34,6 +35,7 @@ import java.util.Map;
 public class UrlMappingController {
 
     private final UrlMappingService urlMappingService;
+    private final UrlAnalyticsService urlAnalyticsService;
     private final UserService userService;
     private final RateLimitService rateLimitService;
     private final AppMetricsService appMetricsService;
@@ -46,11 +48,13 @@ public class UrlMappingController {
 
     public UrlMappingController(
             UrlMappingService urlMappingService,
+            UrlAnalyticsService urlAnalyticsService,
             UserService userService,
             RateLimitService rateLimitService,
             AppMetricsService appMetricsService
     ) {
         this.urlMappingService = urlMappingService;
+        this.urlAnalyticsService = urlAnalyticsService;
         this.userService = userService;
         this.rateLimitService = rateLimitService;
         this.appMetricsService = appMetricsService;
@@ -159,7 +163,7 @@ public class UrlMappingController {
         LocalDateTime start = LocalDateTime.parse(startDate, formatter);
         LocalDateTime end = LocalDateTime.parse(endDate, formatter);
         Users user = userService.findByEmail(principal.getName());
-        List<ClickEventDTO> analytics = urlMappingService.getClickEventByDate(shortUrl, start, end, user);
+        List<ClickEventDTO> analytics = urlAnalyticsService.getClickEventByDate(shortUrl, start, end, user);
         log.info("URL analytics requested shortUrl={} email={}", shortUrl, principal.getName());
         return ResponseEntity.ok(analytics);
     }
@@ -174,7 +178,7 @@ public class UrlMappingController {
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
         LocalDate start = LocalDate.parse(startDate, formatter);
         LocalDate end = LocalDate.parse(endDate, formatter);
-        Map<LocalDate, Long> totalClicks = urlMappingService.getTotalClicksByUserAndDate(user, start, end);
+        Map<LocalDate, Long> totalClicks = urlAnalyticsService.getTotalClicksByUserAndDate(user, start, end);
         log.info("Total clicks analytics requested email={} startDate={} endDate={}", principal.getName(), startDate, endDate);
         return ResponseEntity.ok(totalClicks);
     }

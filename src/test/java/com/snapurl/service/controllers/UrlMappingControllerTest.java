@@ -7,6 +7,7 @@ import com.snapurl.service.service.RateLimitExceededException;
 import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.AppMetricsService;
+import com.snapurl.service.service.UrlAnalyticsService;
 import com.snapurl.service.service.UrlMappingService;
 import com.snapurl.service.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,6 +38,8 @@ class UrlMappingControllerTest {
     @Mock
     private UrlMappingService urlMappingService;
     @Mock
+    private UrlAnalyticsService urlAnalyticsService;
+    @Mock
     private UserService userService;
     @Mock
     private RateLimitService rateLimitService;
@@ -51,7 +54,7 @@ class UrlMappingControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new UrlMappingController(urlMappingService, userService, rateLimitService, appMetricsService);
+        controller = new UrlMappingController(urlMappingService, urlAnalyticsService, userService, rateLimitService, appMetricsService);
         ReflectionTestUtils.setField(controller, "publicShortenPerMinute", 3L);
         ReflectionTestUtils.setField(controller, "authShortenPerMinute", 3L);
         ReflectionTestUtils.setField(controller, "trustForwardedHeader", false);
@@ -130,13 +133,13 @@ class UrlMappingControllerTest {
 
         when(principal.getName()).thenReturn("tester@example.com");
         when(userService.findByEmail("tester@example.com")).thenReturn(user);
-        when(urlMappingService.getClickEventByDate(eq("mine123"), any(LocalDateTime.class), any(LocalDateTime.class), eq(user)))
+        when(urlAnalyticsService.getClickEventByDate(eq("mine123"), any(LocalDateTime.class), any(LocalDateTime.class), eq(user)))
                 .thenReturn(List.of());
 
         var response = controller.getUrlAnalytics("mine123", "2026-04-01T00:00:00", "2026-04-01T23:59:59", principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(userService).findByEmail("tester@example.com");
-        verify(urlMappingService).getClickEventByDate(eq("mine123"), any(LocalDateTime.class), any(LocalDateTime.class), eq(user));
+        verify(urlAnalyticsService).getClickEventByDate(eq("mine123"), any(LocalDateTime.class), any(LocalDateTime.class), eq(user));
     }
 }

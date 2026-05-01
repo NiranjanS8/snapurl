@@ -1,7 +1,6 @@
 package com.snapurl.service.service;
 
 import com.google.common.net.InternetDomainName;
-import com.snapurl.service.dtos.ClickEventDTO;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.UrlMapping;
@@ -16,19 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
-import java.sql.Date;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
-import java.util.LinkedHashMap;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -50,10 +43,8 @@ public class UrlMappingService {
 
     private UrlMappingRepo urlMappingRepo;
     private ClickEventRepo clickEventRepo;
-    private ClickAnalyticsDispatcher clickAnalyticsDispatcher;
     private ShortUrlCacheService shortUrlCacheService;
     private AnalyticsCacheService analyticsCacheService;
-    private AppMetricsService appMetricsService;
     private Environment environment;
 
     public UrlMappingDTO createShortUrl(String originalUrl, String customAlias, Users user) {
@@ -246,116 +237,6 @@ public class UrlMappingService {
     ) {
         int safeSize = Math.min(Math.max(size, 1), 25);
         return urlMappingRepo.searchUserUrls(user, query, sortBy, order, cursor, safeSize, startDate, endDate, minClicks, maxClicks, status);
-    }
-
-    public List<ClickEventDTO> getClickEventByDate(String shortUrl, LocalDateTime start, LocalDateTime end, Users user) {
-        List<ClickEventDTO> cachedAnalytics = analyticsCacheService.getUrlAnalytics(shortUrl, start, end);
-        if (cachedAnalytics != null) {
-            return cachedAnalytics;
-        }
-
-        UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
-        if(urlMapping != null) {
-            if (urlMapping.getUser() == null || user == null || !urlMapping.getUser().getId().equals(user.getId())) {
-                throw new IllegalArgumentException("You can only view analytics for your own short links");
-            }
-            List<ClickEventDTO> analytics = toClickEventDtos(
-                    clickEventRepo.countByUrlMappingGroupedByDate(urlMapping, start, end)
-            );
-            analyticsCacheService.putUrlAnalytics(shortUrl, start, end, analytics);
-            return analytics;
-        }
-        return Collections.emptyList();
-    }
-
-    public Map<LocalDate, Long> getTotalClicksByUserAndDate(Users user, LocalDate start, LocalDate end) {
-        if (user != null && user.getId() != null) {
-            Map<LocalDate, Long> cachedTotalClicks = analyticsCacheService.getTotalClicks(user.getId(), start, end);
-            if (cachedTotalClicks != null) {
-                return cachedTotalClicks;
-            }
-        }
-
-        List<UrlMapping> urlMappings = urlMappingRepo.findByUser(user);
-        if (urlMappings.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        Map<LocalDate, Long> totalClicks = toDateCountMap(
-                clickEventRepo.countByUrlMappingsGroupedByDate(urlMappings, start.atStartOfDay(), end.plusDays(1).atStartOfDay())
-        );
-        if (user != null && user.getId() != null) {
-            analyticsCacheService.putTotalClicks(user.getId(), start, end, totalClicks);
-        }
-        return totalClicks;
-    }
-
-    private List<ClickEventDTO> toClickEventDtos(List<Object[]> dateCounts) {
-        return dateCounts.stream().map(row -> {
-            ClickEventDTO dto = new ClickEventDTO();
-            dto.setClickDate(toLocalDate(row[0]));
-            dto.setClickCount(((Number) row[1]).longValue());
-            return dto;
-        }).collect(Collectors.toList());
-    }
-
-    private Map<LocalDate, Long> toDateCountMap(List<Object[]> dateCounts) {
-        return dateCounts.stream().collect(Collectors.toMap(
-                row -> toLocalDate(row[0]),
-                row -> ((Number) row[1]).longValue(),
-                (left, right) -> left,
-                LinkedHashMap::new
-        ));
-    }
-
-    private LocalDate toLocalDate(Object value) {
-        if (value instanceof LocalDate localDate) {
-            return localDate;
-        }
-        if (value instanceof Date sqlDate) {
-            return sqlDate.toLocalDate();
-        }
-        return LocalDate.parse(value.toString());
-    }
-
-    public UrlMapping getOriginalUrl(String shortUrl) {
-        ShortUrlCacheLookupResult cacheLookupResult = shortUrlCacheService.lookup(shortUrl);
-        if (cacheLookupResult.isHit()) {
-            appMetricsService.recordRedirectCacheHit();
-            UrlMapping cached = cacheLookupResult.getUrlMapping();
-            if (isExpired(cached)) {
-                log.debug("Cached redirect is expired for shortUrl={}", shortUrl);
-                return null;
-            }
-            return cached;
-        }
-
-        if (cacheLookupResult.isKnownMissing()) {
-            appMetricsService.recordRedirectNegativeCacheHit();
-            return null;
-        }
-
-        appMetricsService.recordRedirectCacheMiss();
-        UrlMapping urlMapping = urlMappingRepo.findByShortUrl(shortUrl);
-        appMetricsService.recordRedirectDatabaseLookup(urlMapping != null);
-        if (urlMapping != null) {
-            if (isExpired(urlMapping)) {
-                log.debug("Database redirect is expired for shortUrl={}", shortUrl);
-                return null;
-            }
-            shortUrlCacheService.put(urlMapping);
-            log.debug("Redirect cache populated from database for shortUrl={}", shortUrl);
-        } else {
-            shortUrlCacheService.putMissing(shortUrl);
-            log.debug("Redirect cache stored known-missing marker for shortUrl={}", shortUrl);
-        }
-        return urlMapping;
-    }
-
-    public void trackRedirect(UrlMapping urlMapping) {
-        if (urlMapping == null) {
-            return;
-        }
-        clickAnalyticsDispatcher.dispatchClick(urlMapping);
     }
 
     @Transactional
