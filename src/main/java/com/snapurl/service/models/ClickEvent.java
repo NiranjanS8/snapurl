@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(name = "uk_click_event_event_id", columnNames = "eventId")
         },
         indexes = {
-                @Index(name = "idx_click_event_event_id", columnList = "eventId")
+                @Index(name = "idx_click_event_event_id", columnList = "eventId"),
+                @Index(name = "idx_click_event_url_mapping_time", columnList = "url_mapping_id, clickTime")
         }
 )
 @Getter

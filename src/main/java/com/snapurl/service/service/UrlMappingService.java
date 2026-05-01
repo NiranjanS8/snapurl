@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.security.SecureRandom;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -257,14 +259,9 @@ public class UrlMappingService {
             if (urlMapping.getUser() == null || user == null || !urlMapping.getUser().getId().equals(user.getId())) {
                 throw new IllegalArgumentException("You can only view analytics for your own short links");
             }
-            List<ClickEventDTO> analytics = clickEventRepo.findByUrlMappingAndClickTimeBetween(urlMapping, start, end)
-                    .stream().collect(Collectors.groupingBy(click -> click.getClickTime().toLocalDate(),
-                            Collectors.counting())).entrySet().stream().map(entry -> {
-                                ClickEventDTO dto = new ClickEventDTO();
-                                dto.setClickDate(entry.getKey());
-                                dto.setClickCount(entry.getValue());
-                                return dto;
-                    } ).collect(Collectors.toList());
+            List<ClickEventDTO> analytics = toClickEventDtos(
+                    clickEventRepo.countByUrlMappingGroupedByDate(urlMapping, start, end)
+            );
             analyticsCacheService.putUrlAnalytics(shortUrl, start, end, analytics);
             return analytics;
         }
@@ -280,13 +277,44 @@ public class UrlMappingService {
         }
 
         List<UrlMapping> urlMappings = urlMappingRepo.findByUser(user);
-        Map<LocalDate, Long> totalClicks = clickEventRepo.findByUrlMappingInAndClickTimeBetween(urlMappings, start.atStartOfDay(), end.plusDays(1).atStartOfDay())
-                .stream().collect(Collectors.groupingBy(click -> click.getClickTime().toLocalDate(),
-                        Collectors.counting()));
+        if (urlMappings.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<LocalDate, Long> totalClicks = toDateCountMap(
+                clickEventRepo.countByUrlMappingsGroupedByDate(urlMappings, start.atStartOfDay(), end.plusDays(1).atStartOfDay())
+        );
         if (user != null && user.getId() != null) {
             analyticsCacheService.putTotalClicks(user.getId(), start, end, totalClicks);
         }
         return totalClicks;
+    }
+
+    private List<ClickEventDTO> toClickEventDtos(List<Object[]> dateCounts) {
+        return dateCounts.stream().map(row -> {
+            ClickEventDTO dto = new ClickEventDTO();
+            dto.setClickDate(toLocalDate(row[0]));
+            dto.setClickCount(((Number) row[1]).longValue());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    private Map<LocalDate, Long> toDateCountMap(List<Object[]> dateCounts) {
+        return dateCounts.stream().collect(Collectors.toMap(
+                row -> toLocalDate(row[0]),
+                row -> ((Number) row[1]).longValue(),
+                (left, right) -> left,
+                LinkedHashMap::new
+        ));
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+        if (value instanceof Date sqlDate) {
+            return sqlDate.toLocalDate();
+        }
+        return LocalDate.parse(value.toString());
     }
 
     public UrlMapping getOriginalUrl(String shortUrl) {
