@@ -8,10 +8,10 @@ import com.snapurl.service.dtos.RegisterRequest;
 import com.snapurl.service.dtos.ResetPasswordRequest;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.security.JwtAuthenticationResponse;
+import com.snapurl.service.service.ClientIpResolver;
 import com.snapurl.service.service.RateLimitExceededException;
+import com.snapurl.service.service.RateLimitGuard;
 import com.snapurl.service.service.RateLimitResult;
-import com.snapurl.service.service.RateLimitService;
-import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -38,9 +38,9 @@ class AuthControllerTest {
     @Mock
     private UserService userService;
     @Mock
-    private RateLimitService rateLimitService;
+    private RateLimitGuard rateLimitGuard;
     @Mock
-    private AppMetricsService appMetricsService;
+    private ClientIpResolver clientIpResolver;
     @Mock
     private HttpServletRequest httpServletRequest;
     @Mock
@@ -50,13 +50,12 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AuthController(userService, rateLimitService, appMetricsService);
+        controller = new AuthController(userService, rateLimitGuard, clientIpResolver);
         ReflectionTestUtils.setField(controller, "loginPerWindow", 5L);
         ReflectionTestUtils.setField(controller, "registerPerHour", 5L);
         ReflectionTestUtils.setField(controller, "refreshPerWindow", 10L);
         ReflectionTestUtils.setField(controller, "forgotPasswordPerHour", 4L);
         ReflectionTestUtils.setField(controller, "resetPasswordPerHour", 6L);
-        ReflectionTestUtils.setField(controller, "trustForwardedHeader", false);
         ReflectionTestUtils.setField(controller, "refreshTokenExpirationMs", 604800000L);
         ReflectionTestUtils.setField(controller, "refreshCookieName", "SNAPURL_REFRESH_TOKEN");
         ReflectionTestUtils.setField(controller, "refreshCookieSecure", false);
@@ -69,9 +68,17 @@ class AuthControllerTest {
         loginRequest.setEmail("user@gmail.com");
         loginRequest.setPassword("password123");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:login:127.0.0.1:user@gmail.com"), eq(5L), any()))
-                .thenReturn(new RateLimitResult(false, 5, 6, 0, 900));
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(
+                eq("snapurl:rate-limit:login:127.0.0.1:user@gmail.com"),
+                eq(5L),
+                any(),
+                eq("auth_login"),
+                eq("Too many login attempts. Please try again later.")
+        )).thenThrow(new RateLimitExceededException(
+                "Too many login attempts. Please try again later.",
+                new RateLimitResult(false, 5, 6, 0, 900)
+        ));
 
         RateLimitExceededException exception = assertThrows(
                 RateLimitExceededException.class,
@@ -89,9 +96,10 @@ class AuthControllerTest {
         registerRequest.setEmail("user@gmail.com");
         registerRequest.setPassword("password123");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:register:127.0.0.1"), eq(5L), any()))
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:register:127.0.0.1"), eq(5L), any(), eq("auth_register"), any()))
                 .thenReturn(new RateLimitResult(true, 5, 1, 4, 0));
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
 
         var response = controller.register(registerRequest, httpServletRequest);
 
@@ -114,9 +122,10 @@ class AuthControllerTest {
 
         JwtAuthenticationResponse authResponse = new JwtAuthenticationResponse("access", "refresh", "Bearer");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:login:127.0.0.1:user@gmail.com"), eq(5L), any()))
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:login:127.0.0.1:user@gmail.com"), eq(5L), any(), eq("auth_login"), any()))
                 .thenReturn(new RateLimitResult(true, 5, 2, 3, 0));
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
         when(userService.loginUser(loginRequest)).thenReturn(authResponse);
 
         var response = controller.loginUser(loginRequest, httpServletRequest, httpServletResponse);
@@ -137,9 +146,10 @@ class AuthControllerTest {
         refreshTokenRequest.setRefreshToken("refresh-token");
 
         JwtAuthenticationResponse authResponse = new JwtAuthenticationResponse("new-access", "new-refresh", "Bearer");
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:refresh:127.0.0.1"), eq(10L), any()))
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:refresh:127.0.0.1"), eq(10L), any(), eq("auth_refresh"), any()))
                 .thenReturn(new RateLimitResult(true, 10, 1, 9, 0));
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
         when(userService.refreshAccessToken(refreshTokenRequest)).thenReturn(authResponse);
 
         var response = controller.refreshToken(refreshTokenRequest, httpServletRequest, httpServletResponse);
@@ -160,9 +170,10 @@ class AuthControllerTest {
                 "123456"
         );
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:forgot-password:127.0.0.1"), eq(4L), any()))
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:forgot-password:127.0.0.1"), eq(4L), any(), eq("auth_forgot_password"), any()))
                 .thenReturn(new RateLimitResult(true, 4, 1, 3, 0));
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
         when(userService.requestPasswordReset("user@gmail.com")).thenReturn(serviceResponse);
 
         var response = controller.forgotPassword(request, httpServletRequest);
@@ -177,9 +188,10 @@ class AuthControllerTest {
         request.setCode("123456");
         request.setPassword("newPassword123");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:reset-password:127.0.0.1"), eq(6L), any()))
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:reset-password:127.0.0.1"), eq(6L), any(), eq("auth_reset_password"), any()))
                 .thenReturn(new RateLimitResult(true, 6, 1, 5, 0));
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
 
         var response = controller.resetPassword(request, httpServletRequest);
 
@@ -195,9 +207,17 @@ class AuthControllerTest {
         registerRequest.setEmail("user@gmail.com");
         registerRequest.setPassword("password123");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:register:127.0.0.1"), eq(5L), any()))
-                .thenReturn(new RateLimitResult(false, 5, 6, 0, 3600));
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(
+                eq("snapurl:rate-limit:register:127.0.0.1"),
+                eq(5L),
+                any(),
+                eq("auth_register"),
+                eq("Too many registration attempts. Please try again later.")
+        )).thenThrow(new RateLimitExceededException(
+                "Too many registration attempts. Please try again later.",
+                new RateLimitResult(false, 5, 6, 0, 3600)
+        ));
 
         RateLimitExceededException exception = assertThrows(
                 RateLimitExceededException.class,
@@ -212,9 +232,17 @@ class AuthControllerTest {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setEmail("user@gmail.com");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(eq("snapurl:rate-limit:forgot-password:127.0.0.1"), eq(4L), any()))
-                .thenReturn(new RateLimitResult(false, 4, 5, 0, 3600));
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(
+                eq("snapurl:rate-limit:forgot-password:127.0.0.1"),
+                eq(4L),
+                any(),
+                eq("auth_forgot_password"),
+                eq("Too many password reset requests. Please try again later.")
+        )).thenThrow(new RateLimitExceededException(
+                "Too many password reset requests. Please try again later.",
+                new RateLimitResult(false, 4, 5, 0, 3600)
+        ));
 
         RateLimitExceededException exception = assertThrows(
                 RateLimitExceededException.class,

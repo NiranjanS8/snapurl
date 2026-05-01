@@ -6,8 +6,8 @@ import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.dtos.UrlMappingPageDTO;
 import com.snapurl.service.models.Users;
 import com.snapurl.service.service.RateLimitResult;
-import com.snapurl.service.service.RateLimitExceededException;
-import com.snapurl.service.service.RateLimitService;
+import com.snapurl.service.service.ClientIpResolver;
+import com.snapurl.service.service.RateLimitGuard;
 import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UrlAnalyticsService;
 import com.snapurl.service.service.UrlMappingService;
@@ -16,7 +16,6 @@ import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -37,26 +36,26 @@ public class UrlMappingController {
     private final UrlMappingService urlMappingService;
     private final UrlAnalyticsService urlAnalyticsService;
     private final UserService userService;
-    private final RateLimitService rateLimitService;
+    private final RateLimitGuard rateLimitGuard;
+    private final ClientIpResolver clientIpResolver;
     private final AppMetricsService appMetricsService;
     @Value("${snapurl.rate-limit.public-shorten-per-minute:10}")
     private long publicShortenPerMinute;
     @Value("${snapurl.rate-limit.auth-shorten-per-minute:30}")
     private long authShortenPerMinute;
-    @Value("${snapurl.rate-limit.trust-forwarded-header:false}")
-    private boolean trustForwardedHeader;
-
     public UrlMappingController(
             UrlMappingService urlMappingService,
             UrlAnalyticsService urlAnalyticsService,
             UserService userService,
-            RateLimitService rateLimitService,
+            RateLimitGuard rateLimitGuard,
+            ClientIpResolver clientIpResolver,
             AppMetricsService appMetricsService
     ) {
         this.urlMappingService = urlMappingService;
         this.urlAnalyticsService = urlAnalyticsService;
         this.userService = userService;
-        this.rateLimitService = rateLimitService;
+        this.rateLimitGuard = rateLimitGuard;
+        this.clientIpResolver = clientIpResolver;
         this.appMetricsService = appMetricsService;
     }
 
@@ -65,22 +64,19 @@ public class UrlMappingController {
 
     @PostMapping("/public/shorten")
     public ResponseEntity<?> createPublicShortUrl(@Valid @RequestBody ShortenUrlRequest request, HttpServletRequest httpServletRequest) {
-        String clientIp = extractClientIp(httpServletRequest);
-        RateLimitResult rateLimitResult = rateLimitService.check(
+        String clientIp = clientIpResolver.resolve(httpServletRequest);
+        RateLimitResult rateLimitResult = rateLimitGuard.check(
                 "snapurl:rate-limit:public-shorten:" + clientIp,
                 publicShortenPerMinute,
-                Duration.ofMinutes(1)
+                Duration.ofMinutes(1),
+                "urls_public_shorten",
+                "Too many public shorten requests. Please try again in a minute."
         );
-        if (!rateLimitResult.isAllowed()) {
-            appMetricsService.recordRateLimitHit("urls_public_shorten");
-            log.warn("Public shorten rate limit exceeded for ip={}", clientIp);
-            throw new RateLimitExceededException("Too many public shorten requests. Please try again in a minute.", rateLimitResult);
-        }
 
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), null);
         appMetricsService.recordLinkCreated("public");
         log.info("Public shorten created shortUrl={} ip={}", urlMappingDTO.getShortUrl(), clientIp);
-        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
+        return rateLimitGuard.withHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
     @PostMapping("/shorten")
@@ -90,21 +86,18 @@ public class UrlMappingController {
 
         Users user = userService.findByEmail(principal.getName());
 
-        RateLimitResult rateLimitResult = rateLimitService.check(
+        RateLimitResult rateLimitResult = rateLimitGuard.check(
                 "snapurl:rate-limit:auth-shorten:" + principal.getName(),
                 authShortenPerMinute,
-                Duration.ofMinutes(1)
+                Duration.ofMinutes(1),
+                "urls_authenticated_shorten",
+                "Too many shorten requests. Please try again in a minute."
         );
-        if (!rateLimitResult.isAllowed()) {
-            appMetricsService.recordRateLimitHit("urls_authenticated_shorten");
-            log.warn("Authenticated shorten rate limit exceeded for email={}", principal.getName());
-            throw new RateLimitExceededException("Too many shorten requests. Please try again in a minute.", rateLimitResult);
-        }
 
         UrlMappingDTO urlMappingDTO = urlMappingService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias(), user);
         appMetricsService.recordLinkCreated("authenticated");
         log.info("Authenticated shorten created shortUrl={} email={}", urlMappingDTO.getShortUrl(), principal.getName());
-        return withRateLimitHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
+        return rateLimitGuard.withHeaders(ResponseEntity.ok(), rateLimitResult).body(urlMappingDTO);
     }
 
     @DeleteMapping("/{id}")
@@ -181,26 +174,6 @@ public class UrlMappingController {
         Map<LocalDate, Long> totalClicks = urlAnalyticsService.getTotalClicksByUserAndDate(user, start, end);
         log.info("Total clicks analytics requested email={} startDate={} endDate={}", principal.getName(), startDate, endDate);
         return ResponseEntity.ok(totalClicks);
-    }
-
-    private String extractClientIp(HttpServletRequest request) {
-        if (!trustForwardedHeader) {
-            return request.getRemoteAddr();
-        }
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    private ResponseEntity.BodyBuilder withRateLimitHeaders(ResponseEntity.BodyBuilder builder, RateLimitResult result) {
-        builder.header("X-RateLimit-Limit", String.valueOf(result.getLimit()));
-        builder.header("X-RateLimit-Remaining", String.valueOf(result.getRemaining()));
-        if (!result.isAllowed() && result.getRetryAfterSeconds() > 0) {
-            builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(result.getRetryAfterSeconds()));
-        }
-        return builder;
     }
 
 }

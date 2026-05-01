@@ -3,9 +3,10 @@ package com.snapurl.service.controllers;
 import com.snapurl.service.dtos.ShortenUrlRequest;
 import com.snapurl.service.dtos.UrlMappingDTO;
 import com.snapurl.service.models.Users;
+import com.snapurl.service.service.ClientIpResolver;
 import com.snapurl.service.service.RateLimitExceededException;
+import com.snapurl.service.service.RateLimitGuard;
 import com.snapurl.service.service.RateLimitResult;
-import com.snapurl.service.service.RateLimitService;
 import com.snapurl.service.service.AppMetricsService;
 import com.snapurl.service.service.UrlAnalyticsService;
 import com.snapurl.service.service.UrlMappingService;
@@ -42,7 +43,9 @@ class UrlMappingControllerTest {
     @Mock
     private UserService userService;
     @Mock
-    private RateLimitService rateLimitService;
+    private RateLimitGuard rateLimitGuard;
+    @Mock
+    private ClientIpResolver clientIpResolver;
     @Mock
     private AppMetricsService appMetricsService;
     @Mock
@@ -54,10 +57,9 @@ class UrlMappingControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new UrlMappingController(urlMappingService, urlAnalyticsService, userService, rateLimitService, appMetricsService);
+        controller = new UrlMappingController(urlMappingService, urlAnalyticsService, userService, rateLimitGuard, clientIpResolver, appMetricsService);
         ReflectionTestUtils.setField(controller, "publicShortenPerMinute", 3L);
         ReflectionTestUtils.setField(controller, "authShortenPerMinute", 3L);
-        ReflectionTestUtils.setField(controller, "trustForwardedHeader", false);
     }
 
     @Test
@@ -65,10 +67,17 @@ class UrlMappingControllerTest {
         ShortenUrlRequest request = new ShortenUrlRequest();
         request.setOriginalUrl("https://example.com");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(any(), eq(3L), any())).thenReturn(
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(
+                eq("snapurl:rate-limit:public-shorten:127.0.0.1"),
+                eq(3L),
+                any(),
+                eq("urls_public_shorten"),
+                eq("Too many public shorten requests. Please try again in a minute.")
+        )).thenThrow(new RateLimitExceededException(
+                "Too many public shorten requests. Please try again in a minute.",
                 new RateLimitResult(false, 3, 4, 0, 45)
-        );
+        ));
 
         RateLimitExceededException exception = assertThrows(
                 RateLimitExceededException.class,
@@ -88,10 +97,11 @@ class UrlMappingControllerTest {
         UrlMappingDTO dto = new UrlMappingDTO();
         dto.setShortUrl("abc123");
 
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimitService.check(any(), eq(3L), any())).thenReturn(
+        when(clientIpResolver.resolve(httpServletRequest)).thenReturn("127.0.0.1");
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:public-shorten:127.0.0.1"), eq(3L), any(), eq("urls_public_shorten"), any())).thenReturn(
                 new RateLimitResult(true, 3, 1, 2, 0)
         );
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
         when(urlMappingService.createShortUrl("https://example.com", null, null)).thenReturn(dto);
 
         var response = controller.createPublicShortUrl(request, httpServletRequest);
@@ -114,15 +124,16 @@ class UrlMappingControllerTest {
 
         when(principal.getName()).thenReturn("tester@example.com");
         when(userService.findByEmail("tester@example.com")).thenReturn(user);
-        when(rateLimitService.check(eq("snapurl:rate-limit:auth-shorten:tester@example.com"), eq(3L), any())).thenReturn(
+        when(rateLimitGuard.check(eq("snapurl:rate-limit:auth-shorten:tester@example.com"), eq(3L), any(), eq("urls_authenticated_shorten"), any())).thenReturn(
                 new RateLimitResult(true, 3, 1, 2, 0)
         );
+        when(rateLimitGuard.withHeaders(any(), any())).thenCallRealMethod();
         when(urlMappingService.createShortUrl("https://example.com", null, user)).thenReturn(dto);
 
         var response = controller.createShortUrl(request, principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(rateLimitService).check(eq("snapurl:rate-limit:auth-shorten:tester@example.com"), eq(3L), any());
+        verify(rateLimitGuard).check(eq("snapurl:rate-limit:auth-shorten:tester@example.com"), eq(3L), any(), eq("urls_authenticated_shorten"), any());
     }
 
     @Test
