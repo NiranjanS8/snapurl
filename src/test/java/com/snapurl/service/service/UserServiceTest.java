@@ -105,12 +105,10 @@ class UserServiceTest {
         rotatedToken.setRevoked(false);
 
         when(refreshTokenRepo.findByToken("old-refresh")).thenReturn(Optional.of(existingRefreshToken));
+        when(refreshTokenRepo.revokeActiveToken(eq("old-refresh"), any(LocalDateTime.class))).thenReturn(1);
         when(jwtUtils.generateToken(user.getEmail(), user.getRole())).thenReturn("new-access");
         when(refreshTokenRepo.save(any(RefreshToken.class))).thenAnswer(invocation -> {
             RefreshToken token = invocation.getArgument(0);
-            if (token.getId() != null && token.getId().equals(100L)) {
-                return token;
-            }
             rotatedToken.setToken(token.getToken());
             rotatedToken.setExpiresAt(token.getExpiresAt());
             rotatedToken.setUser(token.getUser());
@@ -126,7 +124,47 @@ class UserServiceTest {
         assertNotNull(response.getRefreshToken());
         assertNotEquals("old-refresh", response.getRefreshToken());
         verify(refreshTokenRepo).findByToken("old-refresh");
-        verify(refreshTokenRepo, org.mockito.Mockito.times(2)).save(any(RefreshToken.class));
+        verify(refreshTokenRepo).revokeActiveToken(eq("old-refresh"), any(LocalDateTime.class));
+        verify(refreshTokenRepo).save(any(RefreshToken.class));
+    }
+
+    @Test
+    void refreshAccessTokenRejectsReusedOrConcurrentlyRevokedToken() {
+        RefreshToken existingRefreshToken = new RefreshToken();
+        existingRefreshToken.setId(100L);
+        existingRefreshToken.setToken("old-refresh");
+        existingRefreshToken.setUser(user);
+        existingRefreshToken.setExpiresAt(LocalDateTime.now().plusDays(1));
+        existingRefreshToken.setRevoked(false);
+
+        when(refreshTokenRepo.findByToken("old-refresh")).thenReturn(Optional.of(existingRefreshToken));
+        when(refreshTokenRepo.revokeActiveToken(eq("old-refresh"), any(LocalDateTime.class))).thenReturn(0);
+
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest();
+        refreshTokenRequest.setRefreshToken("old-refresh");
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.refreshAccessToken(refreshTokenRequest)
+        );
+
+        assertEquals("Refresh token has expired or was revoked.", exception.getMessage());
+        verify(refreshTokenRepo).revokeActiveToken(eq("old-refresh"), any(LocalDateTime.class));
+    }
+
+    @Test
+    void refreshAccessTokenRejectsMissingTokenBeforeRevokeAttempt() {
+        when(refreshTokenRepo.findByToken("missing-refresh")).thenReturn(Optional.empty());
+
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest();
+        refreshTokenRequest.setRefreshToken("missing-refresh");
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.refreshAccessToken(refreshTokenRequest)
+        );
+
+        assertEquals("Invalid refresh token.", exception.getMessage());
     }
 
     @Test

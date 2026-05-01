@@ -169,16 +169,16 @@ public class UserService {
             throw new IllegalArgumentException("Refresh token is required.");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         RefreshToken refreshToken = refreshTokenRepo.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token."));
 
-        if (refreshToken.isRevoked() || refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+        int revokedRows = refreshTokenRepo.revokeActiveToken(refreshTokenValue, now);
+        if (revokedRows != 1) {
             throw new IllegalArgumentException("Refresh token has expired or was revoked.");
         }
 
         Users user = refreshToken.getUser();
-        refreshToken.setRevoked(true);
-        refreshTokenRepo.save(refreshToken);
 
         String accessToken = jwtUtils.generateToken(user.getEmail(), user.getRole());
         String rotatedRefreshToken = createRefreshToken(user).getToken();
