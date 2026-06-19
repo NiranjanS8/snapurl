@@ -15,6 +15,7 @@ import com.snapurl.service.service.RateLimitResult;
 import com.snapurl.service.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -159,6 +160,20 @@ class AuthControllerTest {
         assertEquals("new-access", body.getAccessToken());
         assertEquals(null, body.getRefreshToken());
         verify(httpServletResponse).addHeader(eq("Set-Cookie"), contains("SNAPURL_REFRESH_TOKEN=new-refresh"));
+    }
+
+    @Test
+    void logoutRevokesCookieTokenAndClearsCookie() {
+        when(httpServletRequest.getCookies()).thenReturn(new Cookie[]{
+                new Cookie("SNAPURL_REFRESH_TOKEN", "refresh-token")
+        });
+
+        var response = controller.logout(httpServletRequest, httpServletResponse);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(userService).logout("refresh-token");
+        verify(httpServletResponse).addHeader(eq("Set-Cookie"), contains("SNAPURL_REFRESH_TOKEN="));
+        verify(httpServletResponse).addHeader(eq("Set-Cookie"), contains("Max-Age=0"));
     }
 
     @Test

@@ -24,6 +24,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -82,6 +86,8 @@ public class UserService {
     private long refreshTokenExpirationMs;
     @Value("${snapurl.auth.password-reset-expiration-minutes:30}")
     private long passwordResetExpirationMinutes;
+    @Value("${snapurl.auth.password-reset-token-pepper}")
+    private String passwordResetTokenPepper;
     @Value("${snapurl.auth.expose-reset-token:false}")
     private boolean exposeResetToken;
     @Value("${snapurl.auth.max-failed-login-attempts:5}")
@@ -188,6 +194,14 @@ public class UserService {
     }
 
     @Transactional
+    public void logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return;
+        }
+        refreshTokenRepo.revokeToken(refreshToken);
+    }
+
+    @Transactional
     public ForgotPasswordResponse requestPasswordReset(String email) {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email is required.");
@@ -211,17 +225,18 @@ public class UserService {
             passwordResetTokenRepo.save(token);
         });
 
+        String resetCode = generateResetCode();
         PasswordResetToken passwordResetToken = new PasswordResetToken();
-        passwordResetToken.setToken(generateResetCode());
+        passwordResetToken.setTokenHash(hashResetCode(resetCode));
         passwordResetToken.setUser(user);
         passwordResetToken.setExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes));
         passwordResetTokenRepo.save(passwordResetToken);
-        passwordResetEmailService.sendResetCode(user, passwordResetToken.getToken(), passwordResetExpirationMinutes);
+        passwordResetEmailService.sendResetCode(user, resetCode, passwordResetExpirationMinutes);
         log.info("Password reset code generated for email={}", user.getEmail());
 
         return new ForgotPasswordResponse(
                 "If an account exists for that email, a reset code has been prepared.",
-                exposeResetToken ? passwordResetToken.getToken() : null
+                exposeResetToken ? resetCode : null
         );
     }
 
@@ -232,7 +247,7 @@ public class UserService {
         }
         validatePassword(resetPasswordRequest.getPassword());
 
-        PasswordResetToken resetToken = passwordResetTokenRepo.findByToken(resetPasswordRequest.getCode())
+        PasswordResetToken resetToken = passwordResetTokenRepo.findByTokenHash(hashResetCode(resetPasswordRequest.getCode()))
                 .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset code."));
 
         if (resetToken.isUsed() || resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
@@ -296,8 +311,21 @@ public class UserService {
         String code;
         do {
             code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
-        } while (passwordResetTokenRepo.existsByToken(code));
+        } while (passwordResetTokenRepo.existsByTokenHash(hashResetCode(code)));
         return code;
+    }
+
+    private String hashResetCode(String code) {
+        if (passwordResetTokenPepper == null || passwordResetTokenPepper.isBlank()) {
+            throw new IllegalStateException("Password reset token pepper must be configured.");
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(passwordResetTokenPepper.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return java.util.HexFormat.of().formatHex(mac.doFinal(code.getBytes(StandardCharsets.UTF_8)));
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("Unable to hash password reset code.", exception);
+        }
     }
 
     private void validatePassword(String password) {

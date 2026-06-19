@@ -29,6 +29,10 @@ public interface RefreshTokenRepo extends JpaRepository<RefreshToken, Long> {
             """)
     int revokeActiveToken(@Param("token") String token, @Param("now") LocalDateTime now);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update RefreshToken r set r.revoked = true where r.token = :token and r.revoked = false")
+    int revokeToken(@Param("token") String token);
+
     @Modifying
     @Transactional
     void deleteByUser(Users user);

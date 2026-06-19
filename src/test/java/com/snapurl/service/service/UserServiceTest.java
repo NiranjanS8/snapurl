@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,6 +73,7 @@ class UserServiceTest {
 
         ReflectionTestUtils.setField(userService, "refreshTokenExpirationMs", 604800000L);
         ReflectionTestUtils.setField(userService, "passwordResetExpirationMinutes", 30L);
+        ReflectionTestUtils.setField(userService, "passwordResetTokenPepper", "test-reset-token-pepper");
         ReflectionTestUtils.setField(userService, "exposeResetToken", true);
         ReflectionTestUtils.setField(userService, "maxFailedLoginAttempts", 3);
         ReflectionTestUtils.setField(userService, "accountLockMinutes", 15L);
@@ -227,20 +229,30 @@ class UserServiceTest {
     @Test
     void requestPasswordResetReturnsTokenForExistingSupportedUser() {
         when(userRepo.findByEmail("user@gmail.com")).thenReturn(Optional.of(user));
-        when(passwordResetTokenRepo.existsByToken(any())).thenReturn(false);
+        when(passwordResetTokenRepo.existsByTokenHash(any())).thenReturn(false);
         when(passwordResetTokenRepo.save(any(PasswordResetToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = userService.requestPasswordReset("user@gmail.com");
 
         assertEquals("If an account exists for that email, a reset code has been prepared.", response.getMessage());
         assertNotNull(response.getResetCode());
+        verify(passwordResetTokenRepo).save(argThat(token ->
+                token.getTokenHash().length() == 64 && !token.getTokenHash().equals(response.getResetCode())
+        ));
         verify(passwordResetEmailService).sendResetCode(eq(user), any(), eq(30L));
+    }
+
+    @Test
+    void logoutRevokesPresentedRefreshToken() {
+        userService.logout("refresh-token");
+
+        verify(refreshTokenRepo).revokeToken("refresh-token");
     }
 
     @Test
     void resetPasswordUpdatesPasswordAndRevokesActiveRefreshTokens() {
         PasswordResetToken passwordResetToken = new PasswordResetToken();
-        passwordResetToken.setToken("reset-token");
+        passwordResetToken.setTokenHash("stored-hash");
         passwordResetToken.setUser(user);
         passwordResetToken.setUsed(false);
         passwordResetToken.setExpiresAt(LocalDateTime.now().plusMinutes(10));
@@ -255,7 +267,7 @@ class UserServiceTest {
         request.setCode("reset-token");
         request.setPassword("newPassword123");
 
-        when(passwordResetTokenRepo.findByToken("reset-token")).thenReturn(Optional.of(passwordResetToken));
+        when(passwordResetTokenRepo.findByTokenHash(any())).thenReturn(Optional.of(passwordResetToken));
         when(passwordEncoder.encode("newPassword123")).thenReturn("encoded-password");
         when(refreshTokenRepo.findByUserAndRevokedFalse(user)).thenReturn(List.of(activeRefreshToken));
 
@@ -266,6 +278,9 @@ class UserServiceTest {
         assertEquals(true, activeRefreshToken.isRevoked());
         verify(userRepo).save(user);
         verify(passwordResetTokenRepo).save(passwordResetToken);
+        verify(passwordResetTokenRepo).findByTokenHash(argThat(hash ->
+                hash.length() == 64 && !hash.equals("reset-token")
+        ));
         verify(refreshTokenRepo).save(activeRefreshToken);
     }
 }

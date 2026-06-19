@@ -123,7 +123,8 @@ public class AuthController {
     }
 
     @PostMapping("/public/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        userService.logout(extractRefreshTokenCookie(request));
         clearRefreshTokenCookie(response);
         return ResponseEntity.noContent().build();
     }
