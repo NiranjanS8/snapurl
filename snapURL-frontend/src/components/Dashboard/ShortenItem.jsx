@@ -1,10 +1,12 @@
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import { FaExternalLinkAlt, FaRegCalendarAlt } from 'react-icons/fa';
 import { IoCopy } from 'react-icons/io5';
 import { LiaCheckSolid } from 'react-icons/lia';
-import { MdAnalytics, MdOutlineAdsClick } from 'react-icons/md';
+import { MdAnalytics, MdOutlineAdsClick, MdQrCode2 } from 'react-icons/md';
+import { QRCodeCanvas } from 'qrcode.react';
 import api from '../../api/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStoreContext } from '../../contextApi/ContextApi';
@@ -22,8 +24,10 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
     const [loader, setLoader] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [qrModalOpen, setQrModalOpen] = useState(false);
     const [selectedUrl, setSelectedUrl] = useState("");
     const [analyticsData, setAnalyticsData] = useState([]);
+    const qrCodeRef = useRef(null);
 
     const subDomain = getFrontendOrigin().replace(
         /^https?:\/\//,
@@ -31,6 +35,18 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
       );
     const shortLink = `${subDomain}/s/${shortUrl}`;
     const createdDate = dayjs(createdAt).format("MMM DD, YYYY");
+
+    const downloadQrCode = () => {
+        const canvas = qrCodeRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        const downloadLink = document.createElement("a");
+        downloadLink.download = `snapurl-${shortUrl}-qr.png`;
+        downloadLink.href = canvas.toDataURL("image/png");
+        downloadLink.click();
+    };
 
     const analyticsHandler = (shortUrl) => {
         if (!analyticToggle) {
@@ -64,6 +80,8 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
         if (selectedUrl) {
             fetchMyShortUrl();
         }
+        // The fetch is intentionally triggered only when a short URL is selected.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedUrl]);
 
     const deleteHandler = async () => {
@@ -154,6 +172,15 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
                 )}
               </div>
           </CopyToClipboard>
+          <button
+              type="button"
+              onClick={() => setQrModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-[#151515] px-3.5 py-2.5 text-sm font-medium tracking-[0.01em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition-colors duration-150 hover:bg-[#301B3F]"
+              aria-label={`Show QR code for ${shortLink}`}
+          >
+            <span>QR</span>
+            <MdQrCode2 className="text-lg" />
+          </button>
           <div className="inline-flex items-center gap-2 rounded-xl bg-[#151515] px-3 py-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
             <FaRegCalendarAlt className="text-sm" />
             <span className="text-sm text-white/92">{createdDate}</span>
@@ -166,6 +193,65 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
         onConfirm={deleteHandler}
         loading={deleteLoading}
       />
+      {qrModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 py-8 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`qr-title-${id}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setQrModalOpen(false);
+            }
+          }}
+        >
+          <div className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/10 bg-[#1e1e1e] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:p-6">
+            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#301B3F]/70 blur-3xl" />
+            <div className="relative">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#B4A5A5]">Scan to visit</p>
+                  <h2 id={`qr-title-${id}`} className="text-xl font-semibold tracking-[-0.03em] text-white">Your link, camera-ready.</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQrModalOpen(false)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#151515] text-xl text-[#B4A5A5] transition-colors hover:text-white"
+                  aria-label="Close QR code"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="mx-auto flex aspect-square w-full max-w-[270px] items-center justify-center rounded-[24px] bg-[#f7f3ea] p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_18px_44px_rgba(0,0,0,0.28)]">
+                <QRCodeCanvas
+                  ref={qrCodeRef}
+                  value={buildShortLink(shortUrl)}
+                  size={230}
+                  level="H"
+                  marginSize={1}
+                  bgColor="#f7f3ea"
+                  fgColor="#151515"
+                  title={`QR code for ${shortLink}`}
+                  className="h-auto max-h-full w-full max-w-full"
+                />
+              </div>
+
+              <p className="mt-4 truncate rounded-xl bg-[#151515] px-3 py-2.5 text-center text-xs text-[#B4A5A5]">
+                {buildShortLink(shortUrl)}
+              </p>
+              <button
+                type="button"
+                onClick={downloadQrCode}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#301B3F] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#3C415C]"
+              >
+                <MdQrCode2 className="text-lg" />
+                Download PNG
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
         <div className={`${
             analyticToggle ? "flex" : "hidden"
@@ -207,5 +293,14 @@ const ShortenItem = ({ id, originalUrl, shortUrl, clickCount, createdAt, onDelet
     </div>
   )
 }
+
+ShortenItem.propTypes = {
+    id: PropTypes.number.isRequired,
+    originalUrl: PropTypes.string.isRequired,
+    shortUrl: PropTypes.string.isRequired,
+    clickCount: PropTypes.number.isRequired,
+    createdAt: PropTypes.string.isRequired,
+    onDelete: PropTypes.func,
+};
 
 export default ShortenItem
