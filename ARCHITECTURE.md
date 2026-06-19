@@ -51,17 +51,9 @@ Spring Boot is the main backend framework. It handles:
 
 It gives structure to the backend and makes it easier to separate controllers, services, repositories, and security logic.
 
-### MySQL
+### MySQL & Flyway
 
-MySQL is the system of record. It stores:
-
-- users
-- shortened URLs
-- click events
-- refresh tokens
-- password reset codes
-
-MySQL is the durable source of truth. Even when Redis is used, MySQL remains the final trusted storage layer.
+MySQL is the system of record. It stores users, shortened URLs, click events, refresh tokens, and password reset codes. Flyway is used to manage database migrations and schema versioning. MySQL remains the final trusted storage layer.
 
 ### Redis
 
@@ -189,12 +181,12 @@ Refresh tokens are stored in the database so that:
 
 This entity now acts as a one-time reset code store. It contains:
 
-- the code
+- the hashed token (HmacSHA256 of the 6-digit code)
 - expiry time
 - used flag
 - owning user
 
-Even though the class name still says `PasswordResetToken`, functionally it stores a one-time reset code.
+Even though the class name still says `PasswordResetToken`, functionally it stores a hashed one-time reset code.
 
 ## 6. Core Flows
 
@@ -260,7 +252,7 @@ Why it matters:
 2. Backend validates provider and normalizes email
 3. Existing active reset codes for that user are invalidated
 4. Backend generates a unique 6-digit reset code
-5. Code is stored with expiry
+5. The code is hashed using HmacSHA256 with a pepper, and the hash is stored with expiry
 6. If SMTP is enabled, code is sent by email
 7. User submits code + new password
 8. Backend verifies code, expiry, and unused state
@@ -426,7 +418,8 @@ Why this matters:
 
 - JWT access tokens
 - refresh token rotation
-- refresh token revocation on password reset
+- refresh token revocation on password reset and logout
+- hashed password reset codes using HmacSHA256 with pepper
 
 ### Login Protection
 
@@ -450,10 +443,10 @@ This project is much stronger than a basic CRUD app, but it is still application
 
 Examples:
 
-- reset codes are stored directly, not hashed
+- reset codes are hashed in the database using HmacSHA256 and a configured pepper (previously stored directly)
 - mail delivery exists, but no email template engine is used
 - no audit log system yet
-- no metrics/observability layer yet
+- metrics/observability is supported via Spring Boot Actuator and Micrometer Prometheus endpoints, but lacks alerting/dashboards (e.g. Grafana setup)
 - no multi-region or horizontally distributed deployment story yet
 
 These are good talking points in interviews because they show you understand what is done and what is still missing.
@@ -462,7 +455,7 @@ These are good talking points in interviews because they show you understand wha
 
 If you want a clean way to explain the project:
 
-> SnapURL is a full-stack URL shortening platform with a Spring Boot backend and React frontend. The backend supports JWT auth with refresh tokens, password reset via one-time codes, Redis caching, Redis-based rate limiting, temporary account lockout, RabbitMQ-based asynchronous click analytics, and server-side dashboard querying with filtering, sorting, and pagination. Redis is used for hot redirect lookups and analytics caching, while RabbitMQ decouples click tracking from redirect latency.
+> SnapURL is a full-stack URL shortening platform with a Spring Boot backend and React frontend. The backend supports JWT auth with refresh tokens, password reset via hashed one-time codes, Flyway schema migrations, Redis caching, Redis-based rate limiting, temporary account lockout, RabbitMQ-based asynchronous click analytics, and server-side dashboard querying with filtering, sorting, and pagination. Redis is used for hot redirect lookups and analytics caching, while RabbitMQ decouples click tracking from redirect latency.
 
 ## 13. What to Remember Before an Interview
 

@@ -18,6 +18,7 @@ SnapURL lets users create short links, manage them from a dashboard, and track h
 - Support custom aliases with validation and collision protection
 - Reuse an existing short link when the same authenticated user shortens the same URL again
 - Delete owned links safely with related analytics cleanup
+- Generate dynamic QR codes for shortened URLs and download them in PNG format
 
 ### Analytics
 
@@ -36,7 +37,7 @@ SnapURL lets users create short links, manage them from a dashboard, and track h
 ### Authentication and Security
 
 - JWT access tokens with refresh token rotation
-- forgot-password flow using one-time reset codes
+- forgot-password flow using hashed one-time reset codes (HmacSHA256 with pepper)
 - supported-provider email validation
 - Redis-backed login throttling
 - temporary account lockout after repeated failed logins
@@ -94,7 +95,7 @@ SnapURL includes a number of security-focused decisions:
 - provider-restricted email validation
 - refresh token rotation on renewal
 - refresh token revocation on password reset
-- one-time password reset codes with expiry
+- one-time password reset codes with expiry (hashed in the database using HmacSHA256 with pepper)
 - account lockout after repeated failed logins
 - Redis-backed throttling with rate-limit headers
 - environment-variable based secret configuration
@@ -105,18 +106,19 @@ The frontend is a dark, minimal SaaS-style interface built around:
 
 - a compact link-creation flow
 - a polished dashboard
+- QR code generation and downloading
 - real-time search and filtering controls
 - custom confirmation and recovery flows
 - responsive layout and refined dark-mode typography
 
 ## Technical Highlights
 
-- **Backend:** Java, Spring Boot, Spring Security, Spring Data JPA
+- **Backend:** Java, Spring Boot, Spring Security, Spring Data JPA, Spring Boot Actuator, Micrometer Prometheus
 - **Messaging:** RabbitMQ
 - **Caching / Throttling:** Redis
-- **Database:** MySQL
-- **Frontend:** React, Vite, Tailwind CSS
-- **Auth:** JWT access tokens, refresh tokens, reset codes
+- **Database:** MySQL, Flyway Migrations
+- **Frontend:** React, Vite, Tailwind CSS, lazy loaded routing, dynamic QR code generation
+- **Auth:** JWT access tokens, refresh tokens, hashed reset codes
 - **Testing:** JUnit, Mockito
 
 ## Environment Profiles
@@ -125,9 +127,12 @@ The frontend is a dark, minimal SaaS-style interface built around:
 - `prod` profile is intended for EC2/deployed environments
 - Docker Compose sets these explicitly via `SPRING_PROFILES_ACTIVE`
 
-## API Docs
+### Production Deployment Notes
 
-Swagger UI is available at:
+- **Flyway Database Migration:** When deploying to production where database tables already exist, ensure the environment variable `FLYWAY_BASELINE_ON_MIGRATE=true` is set. This enables Flyway to baseline the existing schema.
+- **Password Reset Pepper:** The application requires a pepper configured for hashing password reset codes. Ensure `RESET_TOKEN_PEPPER` or `JWT_SECRET` is set in the environment variables.
+
+## API Docs
 
 - `/swagger-ui.html`
 
