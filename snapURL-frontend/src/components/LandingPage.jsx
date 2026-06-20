@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { FaChartLine, FaLink, FaLock, FaRocket } from "react-icons/fa";
 import { LiaCheckSolid } from "react-icons/lia";
+import { MdQrCode2 } from "react-icons/md";
+import { QRCodeCanvas } from "qrcode.react";
 
 import Card from "./Card";
 import { useStoreContext } from "../contextApi/ContextApi";
@@ -26,9 +28,20 @@ const LandingPage = () => {
   const [shortUrl, setShortUrl] = useState("");
   const [cardError, setCardError] = useState("");
   const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const qrCodeRef = useRef(null);
 
   const guestUsageCount = Number(localStorage.getItem(GUEST_STORAGE_KEY) || "0");
   const shortUrlLabel = shortUrl.replace(/^https?:\/\//, "");
+
+  const downloadQrCode = () => {
+    const canvas = qrCodeRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `snapurl-qr.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
 
   const createShortLinkHandler = async () => {
     if (!originalUrl.trim()) {
@@ -245,6 +258,15 @@ const LandingPage = () => {
                   >
                     Copy
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setQrModalOpen(true)}
+                    className="flex items-center gap-2 rounded-xl bg-[#151515] px-4 py-2 font-medium tracking-[0.01em] text-[#B4A5A5] shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-colors hover:text-white"
+                    aria-label="Show QR code"
+                  >
+                    <MdQrCode2 className="text-lg" />
+                    QR
+                  </button>
                   <a
                     href={shortUrl}
                     target="_blank"
@@ -258,6 +280,66 @@ const LandingPage = () => {
             )}
           </div>
         </motion.div>
+
+        {qrModalOpen && shortUrl && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 py-8 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qr-landing-title"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setQrModalOpen(false);
+              }
+            }}
+          >
+            <div className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/10 bg-[#1e1e1e] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:p-6">
+              <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#301B3F]/70 blur-3xl" />
+              <div className="relative">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#B4A5A5]">Scan to visit</p>
+                    <h2 id="qr-landing-title" className="text-xl font-semibold tracking-[-0.03em] text-white">Your link, camera-ready.</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setQrModalOpen(false)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#151515] text-xl text-[#B4A5A5] transition-colors hover:text-white"
+                    aria-label="Close QR code"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <div className="mx-auto flex aspect-square w-full max-w-[270px] items-center justify-center rounded-[24px] bg-[#f7f3ea] p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_18px_44px_rgba(0,0,0,0.28)]">
+                  <QRCodeCanvas
+                    ref={qrCodeRef}
+                    value={shortUrl}
+                    size={230}
+                    level="H"
+                    marginSize={1}
+                    bgColor="#f7f3ea"
+                    fgColor="#151515"
+                    title={`QR code for ${shortUrlLabel}`}
+                    className="h-auto max-h-full w-full max-w-full"
+                  />
+                </div>
+
+                <p className="mt-4 truncate rounded-xl bg-[#151515] px-3 py-2.5 text-center text-xs text-[#B4A5A5]">
+                  {shortUrl}
+                </p>
+                <button
+                  type="button"
+                  onClick={downloadQrCode}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#301B3F] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#3C415C]"
+                >
+                  <MdQrCode2 className="text-lg" />
+                  Download PNG
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       </section>
       <section className="pt-10 pb-8">
