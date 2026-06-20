@@ -7,6 +7,7 @@ import { LiaCheckSolid } from "react-icons/lia";
 import { MdQrCode2 } from "react-icons/md";
 import { QRCodeCanvas } from "qrcode.react";
 
+import logoIcon from "../assets/icon.png";
 import Card from "./Card";
 import { useStoreContext } from "../contextApi/ContextApi";
 import api from "../api/api";
@@ -319,7 +320,13 @@ const LandingPage = () => {
                     level="H"
                     marginSize={1}
                     bgColor="#f7f3ea"
-                    fgColor="#151515"
+                    fgColor="#301B3F"
+                    imageSettings={{
+                      src: logoIcon,
+                      height: 46,
+                      width: 46,
+                      excavate: true,
+                    }}
                     title={`QR code for ${shortUrlLabel}`}
                     className="h-auto max-h-full w-full max-w-full"
                   />
