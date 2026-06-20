@@ -37,6 +37,43 @@ const LoginPage = () => {
         mode: "onTouched",
     });
 
+    React.useEffect(() => {
+        const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!googleClientId) {
+            console.warn("VITE_GOOGLE_CLIENT_ID is not configured in the frontend .env file.");
+            return;
+        }
+
+        const handleGoogleLoginResponse = async (response) => {
+            setLoader(true);
+            try {
+                const { data: res } = await api.post(
+                    "/api/auth/public/google",
+                    { idToken: response.credential }
+                );
+                setApiAccessToken(res.accessToken);
+                setToken(res.accessToken);
+                toast.success("Login Successful with Google!");
+                navigate("/dashboard");
+            } catch (error) {
+                toast.error(error?.response?.data?.message || "Google Login Failed!");
+            } finally {
+                setLoader(false);
+            }
+        };
+
+        if (window.google) {
+            window.google.accounts.id.initialize({
+                client_id: googleClientId,
+                callback: handleGoogleLoginResponse,
+            });
+            window.google.accounts.id.renderButton(
+                document.getElementById("googleSignInDiv"),
+                { theme: "filled_black", size: "large", shape: "pill", width: "100%" }
+            );
+        }
+    }, [navigate, setToken]);
+
     const isSupportedEmail = (email) => {
         const normalizedEmail = email?.trim().toLowerCase();
         if (!normalizedEmail || !normalizedEmail.includes("@")) {
@@ -138,6 +175,16 @@ const LoginPage = () => {
                 className='my-4 w-full rounded-full bg-[#301B3F] py-3 font-medium tracking-[0.01em] text-white hover:bg-[#3C415C] disabled:opacity-70'>
                 {loader ? "Loading..." : "Login"}
             </button>
+
+            <div className="flex items-center my-4">
+                <div className="flex-grow border-t border-[#B4A5A5] opacity-20"></div>
+                <span className="mx-4 text-xs uppercase tracking-wider text-[#B4A5A5] opacity-60">or</span>
+                <div className="flex-grow border-t border-[#B4A5A5] opacity-20"></div>
+            </div>
+
+            <div className="w-full flex justify-center min-h-[44px]">
+                <div id="googleSignInDiv" className="w-full"></div>
+            </div>
 
             <p className='mt-6 text-center text-sm text-[#B4A5A5]'>
                 Don't have an account? 

@@ -40,6 +40,8 @@ public class Users {
     @Column(nullable = false)
     private String password;
     private String role = "ROLE_USER";
+    @Column(nullable = false, length = 20)
+    private String provider = "LOCAL";
     @Column(nullable = false)
     private int failedLoginAttempts = 0;
     private LocalDateTime lockedUntil;

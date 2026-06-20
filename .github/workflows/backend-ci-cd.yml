@@ -76,6 +76,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: EC2_APP_DIR,DEPLOY_BRANCH
+          timeout: 20m
           script: |
             set -euo pipefail
 

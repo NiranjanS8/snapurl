@@ -99,6 +99,22 @@ public class AuthController {
         return rateLimitGuard.withHeaders(ResponseEntity.ok(), rateLimitResult).body(accessTokenOnly(authResponse));
     }
 
+    @PostMapping("/public/google")
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody com.snapurl.service.dtos.GoogleLoginRequest googleLoginRequest, HttpServletRequest request, HttpServletResponse response) {
+        String clientIp = clientIpResolver.resolve(request);
+        RateLimitResult rateLimitResult = rateLimitGuard.check(
+                "snapurl:rate-limit:google:" + clientIp,
+                loginPerWindow,
+                Duration.ofMinutes(15),
+                "auth_google_login",
+                "Too many login attempts. Please try again later."
+        );
+        log.info("Google login request accepted from ip={}", clientIp);
+        JwtAuthenticationResponse authResponse = userService.loginOrRegisterGoogleUser(googleLoginRequest.getIdToken());
+        addRefreshTokenCookie(response, authResponse.getRefreshToken());
+        return rateLimitGuard.withHeaders(ResponseEntity.ok(), rateLimitResult).body(accessTokenOnly(authResponse));
+    }
+
     @PostMapping("/public/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody(required = false) RefreshTokenRequest refreshTokenRequest,
                                           HttpServletRequest request,

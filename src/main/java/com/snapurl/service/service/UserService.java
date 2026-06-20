@@ -94,6 +94,11 @@ public class UserService {
     private int maxFailedLoginAttempts;
     @Value("${snapurl.auth.account-lock-minutes:15}")
     private long accountLockMinutes;
+    @Value("${snapurl.security.google-client-id:}")
+    private String googleClientId;
+
+    private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+
 
 
     // This method handles user registration by encoding the password and saving the user to the database
@@ -365,4 +370,101 @@ public class UserService {
             log.info("Login failure counters reset for email={}", user.getEmail());
         }
     }
+
+    @Transactional
+    public JwtAuthenticationResponse loginOrRegisterGoogleUser(String idToken) {
+        if (idToken == null || idToken.isBlank()) {
+            throw new IllegalArgumentException("Google ID Token is required.");
+        }
+
+        if (googleClientId == null || googleClientId.isBlank()) {
+            log.error("Google Client ID is not configured on the backend!");
+            throw new IllegalStateException("Google authentication is not configured on the server.");
+        }
+
+        String verificationUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
+        GoogleTokenPayload payload;
+        try {
+            payload = restTemplate.getForObject(verificationUrl, GoogleTokenPayload.class);
+        } catch (org.springframework.web.client.RestClientException ex) {
+            log.error("Failed to communicate with Google TokenInfo API", ex);
+            throw new IllegalArgumentException("Invalid Google token or connection error.");
+        }
+
+        if (payload == null) {
+            throw new IllegalArgumentException("Invalid Google token.");
+        }
+
+        if (!"https://accounts.google.com".equals(payload.getIss()) && !"accounts.google.com".equals(payload.getIss())) {
+            throw new IllegalArgumentException("Invalid token issuer.");
+        }
+
+        if (!googleClientId.equals(payload.getAud())) {
+            log.error("Google token audience mismatch! Expected: {}, Got: {}", googleClientId, payload.getAud());
+            throw new IllegalArgumentException("Token audience mismatch.");
+        }
+
+        if (!"true".equals(payload.getEmailVerified())) {
+            throw new IllegalArgumentException("Google email is not verified.");
+        }
+
+        String email = payload.getEmail().trim().toLowerCase();
+
+        Users user = userRepo.findByEmail(email).orElseGet(() -> {
+            Users newUser = new Users();
+            newUser.setEmail(email);
+
+            String baseUsername = email.split("@")[0];
+            baseUsername = baseUsername.replaceAll("[^a-zA-Z0-9]", "");
+            if (baseUsername.length() < 3) {
+                baseUsername = "user" + baseUsername;
+            }
+
+            String uniqueUsername = baseUsername;
+            int counter = 1;
+            while (userRepo.findByUsername(uniqueUsername).isPresent()) {
+                uniqueUsername = baseUsername + counter;
+                counter++;
+            }
+
+            newUser.setUsername(uniqueUsername);
+            newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+            newUser.setRole("ROLE_USER");
+            newUser.setProvider("GOOGLE");
+
+            log.info("Creating new user from Google Login: email={}, username={}", email, uniqueUsername);
+            return userRepo.save(newUser);
+        });
+
+        if (isAccountLocked(user)) {
+            throw new AccountLockedException("Your account is temporarily locked. Please try again later.");
+        }
+
+        resetLoginFailures(user);
+
+        if ("LOCAL".equals(user.getProvider())) {
+            user.setProvider("GOOGLE");
+            userRepo.save(user);
+        }
+
+        String accessToken = jwtUtils.generateToken(user.getEmail(), user.getRole());
+        String refreshToken = createRefreshToken(user).getToken();
+
+        log.info("Google login succeeded for email={}", user.getEmail());
+        return new JwtAuthenticationResponse(accessToken, refreshToken, "Bearer");
+    }
+
+    @lombok.Data
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    private static class GoogleTokenPayload {
+        private String iss;
+        private String sub;
+        private String aud;
+        private String email;
+        @com.fasterxml.jackson.annotation.JsonProperty("email_verified")
+        private String emailVerified;
+        private String name;
+        private String picture;
+    }
 }
+
