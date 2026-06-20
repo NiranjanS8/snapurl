@@ -40,3 +40,6 @@ src/main/resources/application-local.properties
 .m2repo/
 logs/
 graphify-out/
+INTERVIEW_PREP.md
+.gitignore
+LATENCY_BENCHMARK.md

@@ -88,7 +88,7 @@ That design improves the architecture story significantly:
 - asynchronous writes
 - clearer separation between user-facing latency and analytics work
 
-## Security Notes
+## Security
 
 SnapURL includes a number of security-focused decisions:
 
@@ -126,11 +126,6 @@ The frontend is a dark, minimal SaaS-style interface built around:
 - `dev` profile is the default for local development
 - `prod` profile is intended for EC2/deployed environments
 - Docker Compose sets these explicitly via `SPRING_PROFILES_ACTIVE`
-
-### Production Deployment Notes
-
-- **Flyway Database Migration:** When deploying to production where database tables already exist, ensure the environment variable `FLYWAY_BASELINE_ON_MIGRATE=true` is set. This enables Flyway to baseline the existing schema.
-- **Password Reset Pepper:** The application requires a pepper configured for hashing password reset codes. Ensure `RESET_TOKEN_PEPPER` or `JWT_SECRET` is set in the environment variables.
 
 ## API Docs
 
