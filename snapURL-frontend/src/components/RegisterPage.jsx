@@ -63,16 +63,37 @@ const RegisterPage = () => {
             }
         };
 
+        const initializeGoogle = () => {
+            if (window.google) {
+                window.google.accounts.id.initialize({
+                    client_id: googleClientId,
+                    callback: handleGoogleLoginResponse,
+                });
+                const buttonDiv = document.getElementById("googleRegisterDiv");
+                if (buttonDiv) {
+                    window.google.accounts.id.renderButton(
+                        buttonDiv,
+                        { theme: "filled_black", size: "large", shape: "pill", width: "100%" }
+                    );
+                }
+            }
+        };
+
         if (window.google) {
-            window.google.accounts.id.initialize({
-                client_id: googleClientId,
-                callback: handleGoogleLoginResponse,
-            });
-            window.google.accounts.id.renderButton(
-                document.getElementById("googleRegisterDiv"),
-                { theme: "filled_black", size: "large", shape: "pill", width: "100%" }
-            );
+            initializeGoogle();
+        } else {
+            const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+            if (script) {
+                script.addEventListener("load", initializeGoogle);
+            }
         }
+
+        return () => {
+            const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+            if (script) {
+                script.removeEventListener("load", initializeGoogle);
+            }
+        };
     }, [navigate, setToken]);
 
     const isSupportedEmail = (email) => {
